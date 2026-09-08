@@ -91,7 +91,7 @@ export function importIberiaSchedule(text) {
     if (!date) return;
 
     const routeMatch = subject.match(/([A-Z]{2,3})(\d{3,4})\s+([A-Z]{3})\d{4}-([A-Z]{3})\d{4}/i);
-    const time = start && end ? `${start}–${end}` : start || end || "Todo el día";
+    const time = start && end ? `${start} - ${end}` : start || end || "Todo el día";
     const activitySubject = splitActivitySubject(subject);
     const label = routeMatch ? `${routeMatch[3].toUpperCase()}-${routeMatch[4].toUpperCase()}` : activitySubject.label;
     const flightNumber = routeMatch ? `${routeMatch[1].toUpperCase()}${routeMatch[2]}` : "";
@@ -103,7 +103,7 @@ export function importIberiaSchedule(text) {
     }
 
     const routeCities = routeMatch
-      ? `${getAirportCity(routeMatch[3]) || routeMatch[3].toUpperCase()}–${getAirportCity(routeMatch[4]) || routeMatch[4].toUpperCase()}`
+      ? `${getAirportCity(routeMatch[3]) || routeMatch[3].toUpperCase()} - ${getAirportCity(routeMatch[4]) || routeMatch[4].toUpperCase()}`
       : "";
     const description = routeMatch ? routeCities : activitySubject.description;
 
