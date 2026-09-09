@@ -69,7 +69,7 @@ export function AppNav({ active, setActive, desktop = false }) {
         </nav>
         <div className="mt-auto rounded-[16px] bg-slate-50 p-3 dark:bg-white/[.04]">
           <p className="text-xs font-semibold">Horario</p>
-          <p className="mt-1 text-xs text-slate-500">Madrid Â· UTC+2</p>
+          <p className="mt-1 text-xs text-slate-500">Madrid · UTC+2</p>
         </div>
       </aside>
     );
@@ -125,7 +125,7 @@ export function CalendarView({ theme, schedule, showSlabTimes = false, onOpenSet
     },
   );
   const weekdays = ["L", "M", "X", "J", "V", "S", "D"];
-  const fullWeekdays = ["Lun", "Mar", "MiÃ©", "Jue", "Vie", "SÃ¡b", "Dom"];
+  const fullWeekdays = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sáb", "Dom"];
   return (
     <div className="mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5">
       <header className="flex min-h-12 items-center justify-between gap-3">
@@ -137,7 +137,7 @@ export function CalendarView({ theme, schedule, showSlabTimes = false, onOpenSet
             Calendario
           </h1>
           <p className="text-sm text-slate-500">
-            Tu programaciÃ³n de un vistazo
+            Tu programación de un vistazo
           </p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -197,7 +197,7 @@ export function CalendarView({ theme, schedule, showSlabTimes = false, onOpenSet
               <input
                 autoFocus
                 className="min-h-11 flex-1 bg-transparent text-sm outline-none"
-                placeholder="Buscar una actividadâ€¦"
+                placeholder="Buscar una actividad"
               />
               <button
                 onClick={() => setSearch(false)}
@@ -483,7 +483,7 @@ export function SettingsView({
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">@{profile.username}</p>
               <p className="text-sm text-slate-500">
-                {profile.airline} Â· {profile.baseCity || profile.base} (
+                {profile.airline} · {profile.baseCity || profile.base} (
                 {profile.base})
               </p>
             </div>
