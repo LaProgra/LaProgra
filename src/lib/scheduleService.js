@@ -22,7 +22,53 @@ export async function loadProfile(userId) {
 }
 
 export async function saveScheduleEvents(userId, eventsByDay) {
-  const rows = Object.entries(eventsByDay).flatMap(([day, dayEvents]) =>
+  const rows = scheduleRows(userId, eventsByDay);
+  // sustituye la programación anterior del usuario
+  const { error: deleteError } = await supabase
+    .from("schedule_events")
+    .delete()
+    .eq("user_id", userId);
+  if (deleteError) throw deleteError;
+  if (rows.length === 0) return;
+  const { error } = await supabase.from("schedule_events").insert(rows);
+  if (error) throw error;
+}
+
+export async function saveAdditionalScheduleEvents(userId, eventsByDay) {
+  const rows = scheduleRows(userId, eventsByDay);
+  const periods = [
+    ...new Map(
+      rows.map(({ month, year }) => [`${year}-${month}`, { month, year }]),
+    ).values(),
+  ];
+
+  for (const { month, year } of periods) {
+    const { error } = await supabase
+      .from("schedule_events")
+      .delete()
+      .eq("user_id", userId)
+      .eq("month", month)
+      .eq("year", year);
+    if (error) throw error;
+  }
+
+  if (rows.length === 0) return;
+  const { error } = await supabase.from("schedule_events").insert(rows);
+  if (error) throw error;
+}
+
+export async function deleteScheduleMonth(userId, month, year) {
+  const { error } = await supabase
+    .from("schedule_events")
+    .delete()
+    .eq("user_id", userId)
+    .eq("month", month)
+    .eq("year", year);
+  if (error) throw error;
+}
+
+function scheduleRows(userId, eventsByDay) {
+  return Object.entries(eventsByDay).flatMap(([day, dayEvents]) =>
     dayEvents.map((event) => ({
       user_id: userId,
       day: Number(day),
@@ -37,11 +83,6 @@ export async function saveScheduleEvents(userId, eventsByDay) {
       firma_time: event.firmaTime || null,
     })),
   );
-  // sustituye la programación anterior del usuario
-  await supabase.from("schedule_events").delete().eq("user_id", userId);
-  if (rows.length === 0) return;
-  const { error } = await supabase.from("schedule_events").insert(rows);
-  if (error) throw error;
 }
 
 export async function loadScheduleEvents(userId) {

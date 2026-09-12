@@ -9,7 +9,12 @@ import {
   SettingsView,
 } from "./screens/appViews";
 import { supabase } from "./lib/supabaseClient";
-import { loadProfile, loadScheduleEvents } from "./lib/scheduleService";
+import {
+  loadProfile,
+  loadScheduleEvents,
+  deleteScheduleMonth,
+  saveAdditionalScheduleEvents,
+} from "./lib/scheduleService";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -63,6 +68,62 @@ export default function App() {
   }, []);
 
   const logout = () => supabase.auth.signOut();
+  const addSchedule = async (newEvents, period) => {
+    if (session?.user?.id) {
+      await saveAdditionalScheduleEvents(session.user.id, newEvents);
+    }
+    const importedPeriods = new Set(
+      Object.values(newEvents)
+        .flat()
+        .map((event) => `${event.year}-${event.month}`),
+    );
+    setSchedule((currentSchedule) => {
+      const merged = {};
+      Object.entries(currentSchedule).forEach(([day, events]) => {
+        const retainedEvents = events.filter(
+          (event) => !importedPeriods.has(`${event.year}-${event.month}`),
+        );
+        if (retainedEvents.length) merged[day] = retainedEvents;
+      });
+      Object.entries(newEvents).forEach(([day, events]) => {
+        merged[day] = [...(merged[day] || []), ...events];
+      });
+      return merged;
+    });
+    if (period) setSchedulePeriod(period);
+  };
+  const deleteSchedule = async ({ month, year }) => {
+    if (session?.user?.id) {
+      await deleteScheduleMonth(session.user.id, month, year);
+    }
+    const nextPeriod = Object.values(schedule)
+      .flat()
+      .find(
+        (event) =>
+          event.month &&
+          event.year &&
+          (event.month !== month || event.year !== year),
+      );
+    setSchedule((currentSchedule) =>
+      Object.fromEntries(
+        Object.entries(currentSchedule)
+          .map(([day, events]) => [
+            day,
+            events.filter(
+              (event) => event.month !== month || event.year !== year,
+            ),
+          ])
+          .filter(([, events]) => events.length),
+      ),
+    );
+    if (
+      schedulePeriod.month === month &&
+      schedulePeriod.year === year &&
+      nextPeriod
+    ) {
+      setSchedulePeriod({ month: nextPeriod.month, year: nextPeriod.year });
+    }
+  };
   return (
     <div
       className={theme === "dark" ? "dark" : ""}
@@ -112,6 +173,9 @@ export default function App() {
                 setProfile={setProfile}
                 showSlabTimes={showSlabTimes}
                 setShowSlabTimes={setShowSlabTimes}
+                schedule={schedule}
+                onAddSchedule={addSchedule}
+                onDeleteSchedule={deleteSchedule}
                 onLogout={logout}
                 onBack={() => setActive("calendar")}
               />
