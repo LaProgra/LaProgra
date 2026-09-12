@@ -1,7 +1,72 @@
 import { CalendarDays, Settings, Users } from "lucide-react";
 import { LaPrograMark } from "../../components/shared";
 
-export function AppNav({ active, setActive, desktop = false }) {
+function TimeZoneSelector({
+  timeZonePreference = "base",
+  baseIata,
+  onTimeZoneChange,
+}) {
+  const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const isCustom = !["base", "UTC"].includes(timeZonePreference);
+  const selectedMode = isCustom ? "custom" : timeZonePreference;
+  const timeZones =
+    typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("timeZone")
+      : [browserTimeZone];
+  const customTimeZone = isCustom ? timeZonePreference : browserTimeZone;
+  const availableTimeZones = timeZones.includes(customTimeZone)
+    ? timeZones
+    : [customTimeZone, ...timeZones];
+  const updateTimeZone = (timeZone) => {
+    Promise.resolve(onTimeZoneChange?.(timeZone)).catch((error) => {
+      console.error("No se pudo guardar el uso horario", error);
+    });
+  };
+
+  return (
+    <div className="mt-auto rounded-[16px] bg-slate-50 p-3 dark:bg-white/[.04]">
+      <label className="block text-xs font-semibold" htmlFor="time-zone-mode">
+        Uso horario
+      </label>
+      <select
+        id="time-zone-mode"
+        value={selectedMode}
+        onChange={(event) => {
+          const nextMode = event.target.value;
+          updateTimeZone(nextMode === "custom" ? browserTimeZone : nextMode);
+        }}
+        className="mt-1 w-full bg-transparent text-xs text-slate-500 outline-none dark:text-slate-400"
+      >
+        <option value="base">{baseIata || "Base"} · LT</option>
+        <option value="UTC">UTC</option>
+        <option value="custom">Otro…</option>
+      </select>
+      {isCustom && (
+        <select
+          value={customTimeZone}
+          onChange={(event) => updateTimeZone(event.target.value)}
+          className="mt-2 w-full rounded-[8px] bg-white px-2 py-1.5 text-xs text-slate-600 outline-none dark:bg-white/[.08] dark:text-slate-300"
+          aria-label="Elegir otro uso horario"
+        >
+          {availableTimeZones.map((timeZone) => (
+            <option key={timeZone} value={timeZone}>
+              {timeZone}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
+export function AppNav({
+  active,
+  setActive,
+  desktop = false,
+  timeZonePreference,
+  baseIata,
+  onTimeZoneChange,
+}) {
   const items = [
     ["calendar", CalendarDays, "Calendario"],
     ["compare", Users, "Comparar"],
@@ -26,10 +91,11 @@ export function AppNav({ active, setActive, desktop = false }) {
             </button>
           ))}
         </nav>
-        <div className="mt-auto rounded-[16px] bg-slate-50 p-3 dark:bg-white/[.04]">
-          <p className="text-xs font-semibold">Horario</p>
-          <p className="mt-1 text-xs text-slate-500">Madrid · UTC+2</p>
-        </div>
+        <TimeZoneSelector
+          timeZonePreference={timeZonePreference}
+          baseIata={baseIata}
+          onTimeZoneChange={onTimeZoneChange}
+        />
       </aside>
     );
   }

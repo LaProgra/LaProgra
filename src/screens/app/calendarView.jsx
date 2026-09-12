@@ -12,6 +12,12 @@ import {
 } from "lucide-react";
 import { activityStyles } from "../../data/schedule";
 import { LaPrograMark } from "../../components/shared";
+import {
+  getEventDayIndicator,
+  formatEventTimeRange,
+  formatFirmaTime,
+  getEventDisplayDate,
+} from "../../lib/timeZone";
 
 export function Slab({
   event,
@@ -19,8 +25,10 @@ export function Slab({
   onClick,
   compact = false,
   showTime = false,
+  timeZone,
 }) {
   const s = activityStyles[event.type];
+  const dayIndicator = getEventDayIndicator(event, timeZone);
   return (
     <button
       onClick={onClick}
@@ -31,7 +39,12 @@ export function Slab({
       </div>
       {(!compact || showTime) && (
         <div className="mt-0.5 truncate text-[9px] font-medium opacity-75 md:text-[10px]">
-          {event.time}
+          {formatEventTimeRange(event, timeZone)}
+          {dayIndicator && (
+            <sup className="ml-0.5 text-[7px] font-bold leading-none">
+              {dayIndicator}
+            </sup>
+          )}
         </div>
       )}
     </button>
@@ -42,6 +55,7 @@ export function CalendarView({
   theme,
   schedule,
   showSlabTimes = false,
+  timeZone,
   onOpenSettings,
   onLogout,
 }) {
@@ -94,11 +108,29 @@ export function CalendarView({
       year: nextMonth.getFullYear(),
     });
   };
-  const eventsForVisiblePeriod = (dayEvents = []) =>
-    dayEvents.filter(
-      (event) =>
-        event.month === visiblePeriod.month && event.year === visiblePeriod.year,
-    );
+  const eventsByVisibleDay = Object.entries(scheduleEvents).reduce(
+    (eventsByDay, [sourceDay, dayEvents]) => {
+      dayEvents.forEach((event) => {
+        const datedEvent = {
+          ...event,
+          day: event.day || Number(sourceDay),
+          month: event.month || schedulePeriod.month,
+          year: event.year || schedulePeriod.year,
+        };
+        const eventDate = getEventDisplayDate(datedEvent, timeZone);
+        if (
+          eventDate.month !== visiblePeriod.month ||
+          eventDate.year !== visiblePeriod.year
+        ) {
+          return;
+        }
+        if (!eventsByDay[eventDate.day]) eventsByDay[eventDate.day] = [];
+        eventsByDay[eventDate.day].push(datedEvent);
+      });
+      return eventsByDay;
+    },
+    {},
+  );
 
   return (
     <div className="mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5">
@@ -248,13 +280,14 @@ export function CalendarView({
                       {day}
                     </div>
                     <div className="space-y-1">
-                      {eventsForVisiblePeriod(scheduleEvents[day]).map((event, index) => (
+                      {(eventsByVisibleDay[day] || []).map((event, index) => (
                         <Slab
                           key={index}
                           event={event}
                           theme={theme}
                           compact
                           showTime={showSlabTimes}
+                          timeZone={timeZone}
                           onClick={() => setSelected({ ...event, day })}
                         />
                       ))}
@@ -271,9 +304,7 @@ export function CalendarView({
           animate={{ opacity: 1, y: 0 }}
           className="mt-4 space-y-2"
         >
-          {Object.entries(scheduleEvents).map(([day, dayEvents]) => {
-            const visibleEvents = eventsForVisiblePeriod(dayEvents);
-            if (!visibleEvents.length) return null;
+          {Object.entries(eventsByVisibleDay).map(([day, visibleEvents]) => {
             return (
               <div
                 key={day}
@@ -293,6 +324,7 @@ export function CalendarView({
                       theme={theme}
                       compact
                       showTime={showSlabTimes}
+                      timeZone={timeZone}
                       onClick={() => setSelected({ ...event, day })}
                     />
                   ))}
@@ -350,16 +382,20 @@ export function CalendarView({
               <div className="flex items-center gap-3">
                 <Clock3 size={18} className="text-slate-400" />
                 <div>
-                  <p className="text-sm font-semibold">{selected.time}</p>
+                  <p className="text-sm font-semibold">
+                    {formatEventTimeRange(selected, timeZone)}
+                    {getEventDayIndicator(selected, timeZone) &&
+                      ` ${getEventDayIndicator(selected, timeZone)}`}
+                  </p>
                 </div>
               </div>
-              {selected.firmaTime && (
+              {(selected.firmaAt || selected.firmaTime) && (
                 <div className="flex items-center gap-3">
                   <Pencil size={18} className="text-slate-400" />
                   <div>
                     <p className="text-xs text-slate-500">Firma</p>
                     <p className="text-sm font-semibold">
-                      {selected.firmaTime}
+                      {formatFirmaTime(selected, timeZone)}
                     </p>
                   </div>
                 </div>

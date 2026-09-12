@@ -7,6 +7,7 @@ export async function saveProfile(userId, profile) {
     base: profile.base,
     base_city: profile.baseCity,
     username: profile.username,
+    display_time_zone: profile.displayTimeZone || "base",
   });
   if (error) throw error;
 }
@@ -76,11 +77,12 @@ function scheduleRows(userId, eventsByDay) {
       year: event.year,
       label: event.label,
       description: event.desc,
-      time_range: event.time,
+      starts_at: event.startsAt || null,
+      ends_at: event.endsAt || null,
       type: event.type,
       flight_number: event.flightNumber || null,
       situated: event.situated || false,
-      firma_time: event.firmaTime || null,
+      firma_at: event.firmaAt || null,
     })),
   );
 }
@@ -97,13 +99,15 @@ export async function loadScheduleEvents(userId) {
   data.forEach((row) => {
     if (!eventsByDay[row.day]) eventsByDay[row.day] = [];
     eventsByDay[row.day].push({
+      day: row.day,
       label: row.label,
       desc: row.description,
-      time: row.time_range,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
       type: row.type,
       flightNumber: row.flight_number,
       situated: row.situated,
-      firmaTime: row.firma_time,
+      firmaAt: row.firma_at,
       month: row.month,
       year: row.year,
     });

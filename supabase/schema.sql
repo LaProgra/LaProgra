@@ -4,6 +4,7 @@ create table if not exists profiles (
   base text not null default 'MAD',
   base_city text,
   username text not null,
+  display_time_zone text not null default 'base',
   updated_at timestamptz not null default now()
 );
 
@@ -15,13 +16,27 @@ create table if not exists schedule_events (
   year int not null,
   label text not null,
   description text,
-  time_range text,
+  starts_at timestamptz,
+  ends_at timestamptz,
   type text,
   flight_number text,
   situated boolean default false,
-  firma_time text,
+  firma_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+-- Añade los campos al esquema si la tabla se creó con una versión anterior.
+alter table profiles
+  add column if not exists display_time_zone text not null default 'base';
+alter table schedule_events
+  add column if not exists starts_at timestamptz,
+  add column if not exists ends_at timestamptz,
+  add column if not exists firma_at timestamptz;
+
+-- No hay datos heredados que migrar: los instantes se guardan únicamente en UTC.
+alter table schedule_events
+  drop column if exists time_range,
+  drop column if exists firma_time;
 
 alter table profiles enable row level security;
 alter table schedule_events enable row level security;

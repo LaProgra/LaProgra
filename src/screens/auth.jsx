@@ -243,6 +243,7 @@ export function Onboarding({
       base,
       baseCity: getAirportCity(base),
       username: username || "pedro",
+      displayTimeZone: "base",
     };
     setProfile(profileData);
     if (userId) {

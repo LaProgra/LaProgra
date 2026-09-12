@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAirportCity } from "./importers";
+import { getAirportCity, getAirportTimeZone } from "./importers";
 import { demoSchedule } from "./data/schedule";
 import { Login, Onboarding } from "./screens/auth";
 import {
@@ -14,7 +14,9 @@ import {
   loadScheduleEvents,
   deleteScheduleMonth,
   saveAdditionalScheduleEvents,
+  saveProfile,
 } from "./lib/scheduleService";
+import { getDisplayTimeZone } from "./lib/timeZone";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -25,6 +27,7 @@ export default function App() {
     base: "MAD",
     baseCity: getAirportCity("MAD"),
     username: "pedro",
+    displayTimeZone: "base",
   });
   const [schedule, setSchedule] = useState(demoSchedule);
   const [schedulePeriod, setSchedulePeriod] = useState({
@@ -45,6 +48,7 @@ export default function App() {
       base: profileRow.base,
       baseCity: profileRow.base_city,
       username: profileRow.username,
+      displayTimeZone: profileRow.display_time_zone || "base",
     });
     const { events, period } = await loadScheduleEvents(userId);
     setSchedule(events);
@@ -68,6 +72,18 @@ export default function App() {
   }, []);
 
   const logout = () => supabase.auth.signOut();
+  const updateDisplayTimeZone = async (displayTimeZone) => {
+    const nextProfile = { ...profile, displayTimeZone };
+    setProfile(nextProfile);
+    try {
+      if (session?.user?.id) {
+        await saveProfile(session.user.id, nextProfile);
+      }
+    } catch (error) {
+      setProfile(profile);
+      throw error;
+    }
+  };
   const addSchedule = async (newEvents, period) => {
     if (session?.user?.id) {
       await saveAdditionalScheduleEvents(session.user.id, newEvents);
@@ -124,6 +140,11 @@ export default function App() {
       setSchedulePeriod({ month: nextPeriod.month, year: nextPeriod.year });
     }
   };
+  const baseTimeZone = getAirportTimeZone(profile.base);
+  const displayTimeZone = getDisplayTimeZone(
+    profile.displayTimeZone,
+    baseTimeZone,
+  );
   return (
     <div
       className={theme === "dark" ? "dark" : ""}
@@ -151,13 +172,21 @@ export default function App() {
       )}{" "}
       {screen === "app" && (
         <div className="min-h-screen bg-[#F5F6F8] text-slate-950 dark:bg-[#090B10] dark:text-white">
-          <AppNav active={active} setActive={setActive} desktop />
+          <AppNav
+            active={active}
+            setActive={setActive}
+            desktop
+            timeZonePreference={profile.displayTimeZone}
+            baseIata={profile.base}
+            onTimeZoneChange={updateDisplayTimeZone}
+          />
           <main className="lg:pl-[236px]">
             {active === "calendar" && (
               <CalendarView
                 theme={theme}
                 schedule={{ events: schedule, period: schedulePeriod }}
                 showSlabTimes={showSlabTimes}
+                timeZone={displayTimeZone}
                 onOpenSettings={() => setActive("settings")}
                 onLogout={logout}
               />
@@ -181,7 +210,13 @@ export default function App() {
               />
             )}
           </main>
-          <AppNav active={active} setActive={setActive} />
+          <AppNav
+            active={active}
+            setActive={setActive}
+            timeZonePreference={profile.displayTimeZone}
+            baseIata={profile.base}
+            onTimeZoneChange={updateDisplayTimeZone}
+          />
         </div>
       )}
     </div>

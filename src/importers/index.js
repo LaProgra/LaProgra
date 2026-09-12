@@ -1,6 +1,10 @@
-import { getAirportCity, importIberiaSchedule } from "./iberiaScheduleImporter";
+import {
+  getAirportCity,
+  getAirportTimeZone,
+  importIberiaSchedule,
+} from "./iberiaScheduleImporter";
 
-export { getAirportCity };
+export { getAirportCity, getAirportTimeZone };
 
 const scheduleImporters = {
   Iberia: importIberiaSchedule,
