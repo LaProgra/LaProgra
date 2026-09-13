@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
   Clock3,
   LogOut,
   Pencil,
-  Search,
   Settings,
   X,
 } from "lucide-react";
-import { activityStyles } from "../../data/schedule";
+import { activityStyles } from "../../data/activityStyles";
 import { LaPrograMark } from "../../components/shared";
 import {
   getEventDayIndicator,
+  getDateInTimeZone,
   formatEventTimeRange,
   formatFirmaTime,
   getEventDisplayDate,
@@ -29,19 +29,20 @@ export function Slab({
 }) {
   const s = activityStyles[event.type];
   const dayIndicator = getEventDayIndicator(event, timeZone);
+  const showsTime = !compact || showTime;
   return (
     <button
       onClick={onClick}
-      className={`w-full overflow-hidden rounded-[8px] border px-1.5 py-1 text-center transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${theme === "dark" ? s.dark : s.light}`}
+      className={`slab flex w-full flex-col justify-center overflow-hidden rounded-[8px] border px-1.5 py-1 text-center transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${showsTime ? "min-h-[36px]" : "min-h-[22px]"} ${theme === "dark" ? s.dark : s.light}`}
     >
-      <div className="truncate text-[10px] font-extrabold leading-tight tracking-wide md:text-[11px]">
+      <div className="slab__label whitespace-nowrap font-extrabold leading-tight tracking-wide">
         {event.label}
       </div>
-      {(!compact || showTime) && (
-        <div className="mt-0.5 truncate text-[9px] font-medium opacity-75 md:text-[10px]">
+      {showsTime && (
+        <div className="slab__time mt-0.5 whitespace-nowrap font-medium opacity-75">
           {formatEventTimeRange(event, timeZone)}
           {dayIndicator && (
-            <sup className="ml-0.5 text-[7px] font-bold leading-none">
+            <sup className="slab__day-indicator ml-0.5 font-bold leading-none">
               {dayIndicator}
             </sup>
           )}
@@ -51,17 +52,58 @@ export function Slab({
   );
 }
 
+function CalendarDay({
+  day,
+  index,
+  isToday,
+  isLastRow,
+  events,
+  theme,
+  showSlabTimes,
+  timeZone,
+  onSelect,
+}) {
+  return (
+    <div
+      className={`relative min-h-[82px] border-b border-r border-black/[.055] p-1 dark:border-white/[.06] sm:min-h-[116px] sm:p-1.5 lg:min-h-[132px] ${index % 7 === 6 ? "border-r-0" : ""} ${isLastRow ? "border-b-0" : ""} ${isToday ? "bg-blue-50/40 dark:bg-blue-950/10" : ""}`}
+    >
+      {day && (
+        <>
+          <div
+            className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold sm:text-xs ${isToday ? "bg-[#176BFF] text-white" : "text-slate-600 dark:text-slate-300"}`}
+          >
+            {day}
+          </div>
+          <div className="space-y-1">
+            {events.map((event, eventIndex) => (
+              <Slab
+                key={eventIndex}
+                event={event}
+                theme={theme}
+                compact
+                showTime={showSlabTimes}
+                timeZone={timeZone}
+                onClick={() => onSelect({ ...event, day })}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function CalendarView({
   theme,
   schedule,
   showSlabTimes = false,
   timeZone,
+  onToggleSlabTimes,
   onOpenSettings,
   onLogout,
 }) {
   const [view, setView] = useState("mes");
   const [selected, setSelected] = useState(null);
-  const [search, setSearch] = useState(false);
   const [profileMenu, setProfileMenu] = useState(false);
   const scheduleEvents = schedule.events || schedule;
   const schedulePeriod = schedule.period || { month: 9, year: 2026 };
@@ -97,6 +139,7 @@ export function CalendarView({
   );
   const weekdays = ["L", "M", "X", "J", "V", "S", "D"];
   const fullWeekdays = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sáb", "Dom"];
+  const today = getDateInTimeZone(timeZone);
   const moveMonth = (offset) => {
     const nextMonth = new Date(
       visiblePeriod.year,
@@ -148,11 +191,16 @@ export function CalendarView({
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setSearch(!search)}
-            className="grid h-10 w-10 place-items-center rounded-full text-slate-600 hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-white/[.07]"
-            aria-label="Buscar"
+            onClick={onToggleSlabTimes}
+            aria-pressed={showSlabTimes}
+            className={`grid h-10 w-10 place-items-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${showSlabTimes ? "bg-blue-50 text-[#176BFF] dark:bg-blue-950/50 dark:text-blue-300" : "text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]"}`}
+            aria-label={
+              showSlabTimes
+                ? "Ocultar horarios en los slabs"
+                : "Mostrar horarios en los slabs"
+            }
           >
-            <Search size={19} />
+            <Clock3 size={19} />
           </button>
           <div className="relative ml-1">
             <button
@@ -190,31 +238,6 @@ export function CalendarView({
           </div>
         </div>
       </header>
-      <AnimatePresence>
-        {search && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="mt-3 flex items-center gap-2 rounded-[14px] border border-black/10 bg-white px-3 dark:border-white/10 dark:bg-white/[.05]">
-              <Search size={17} className="text-slate-400" />
-              <input
-                autoFocus
-                className="min-h-11 flex-1 bg-transparent text-sm outline-none"
-                placeholder="Buscar una actividad"
-              />
-              <button
-                onClick={() => setSearch(false)}
-                aria-label="Cerrar búsqueda"
-              >
-                <X size={17} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3 sm:mt-7">
         <div>
           <div className="flex items-center gap-0">
@@ -268,33 +291,22 @@ export function CalendarView({
           </div>
           <div className="grid grid-cols-7">
             {monthDays.map((day, index) => (
-              <div
+              <CalendarDay
                 key={index}
-                className={`relative min-h-[82px] border-b border-r border-black/[.055] p-1 dark:border-white/[.06] sm:min-h-[116px] sm:p-1.5 lg:min-h-[132px] ${index % 7 === 6 ? "border-r-0" : ""} ${index >= monthDays.length - 7 ? "border-b-0" : ""} ${day === 3 ? "bg-blue-50/40 dark:bg-blue-950/10" : ""}`}
-              >
-                {day && (
-                  <>
-                    <div
-                      className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold sm:text-xs ${day === 3 ? "bg-[#176BFF] text-white" : "text-slate-600 dark:text-slate-300"}`}
-                    >
-                      {day}
-                    </div>
-                    <div className="space-y-1">
-                      {(eventsByVisibleDay[day] || []).map((event, index) => (
-                        <Slab
-                          key={index}
-                          event={event}
-                          theme={theme}
-                          compact
-                          showTime={showSlabTimes}
-                          timeZone={timeZone}
-                          onClick={() => setSelected({ ...event, day })}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+                day={day}
+                index={index}
+                isToday={
+                  day === today.day &&
+                  visiblePeriod.month === today.month &&
+                  visiblePeriod.year === today.year
+                }
+                isLastRow={index >= monthDays.length - 7}
+                events={eventsByVisibleDay[day] || []}
+                theme={theme}
+                showSlabTimes={showSlabTimes}
+                timeZone={timeZone}
+                onSelect={setSelected}
+              />
             ))}
           </div>
         </motion.section>
@@ -365,10 +377,22 @@ export function CalendarView({
                       Situado
                     </div>
                   )}
+                  {selected.flightNumber?.startsWith("GRD") && (
+                    <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
+                      Por carretera
+                    </div>
+                  )}
+                  {selected.flightNumber?.endsWith("P") && (
+                    <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
+                      vacío
+                    </div>
+                  )}
                 </div>
-                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
-                  {selected.desc}
-                </h3>
+                {selected.desc && (
+                  <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
+                    {selected.desc}
+                  </h3>
+                )}
               </div>
               <button
                 onClick={() => setSelected(null)}

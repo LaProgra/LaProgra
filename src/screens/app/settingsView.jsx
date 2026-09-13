@@ -16,8 +16,6 @@ export function SettingsView({
   setTheme,
   profile,
   setProfile,
-  showSlabTimes,
-  setShowSlabTimes,
   schedule,
   onAddSchedule,
   onDeleteSchedule,
@@ -38,10 +36,6 @@ export function SettingsView({
       baseCity: getAirportCity(normalized),
     });
     setEditing(false);
-  };
-
-  const toggleSlabTimes = () => {
-    setShowSlabTimes(!showSlabTimes);
   };
 
   return (
@@ -153,28 +147,6 @@ export function SettingsView({
         onAddSchedule={onAddSchedule}
         onDeleteSchedule={onDeleteSchedule}
       />
-      <section className="mt-7 overflow-hidden rounded-[20px] border border-black/[.06] bg-white dark:border-white/[.07] dark:bg-[#14171A]">
-        <div className="flex items-center gap-4 p-5">
-          <div className="flex-1">
-            <p className="text-sm font-semibold">Horarios en los slabs</p>
-            <p className="text-xs text-slate-500">
-              Muestra la hora dentro de cada actividad del calendario
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={showSlabTimes}
-            onClick={toggleSlabTimes}
-            className={`relative h-7 w-12 rounded-full transition ${showSlabTimes ? "bg-[#176BFF]" : "bg-slate-200 dark:bg-white/[.15]"}`}
-            aria-label="Mostrar horarios en los slabs"
-          >
-            <span
-              className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${showSlabTimes ? "left-6" : "left-1"}`}
-            />
-          </button>
-        </div>
-      </section>
       <Button
         variant="ghost"
         onClick={() => setDeleteConfirmation(true)}

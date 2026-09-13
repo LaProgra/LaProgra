@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { getAirportCity, getAirportTimeZone } from "./importers";
-import { demoSchedule } from "./data/schedule";
 import { Login, Onboarding } from "./screens/auth";
 import {
   AppNav,
@@ -29,10 +28,10 @@ export default function App() {
     username: "pedro",
     displayTimeZone: "base",
   });
-  const [schedule, setSchedule] = useState(demoSchedule);
-  const [schedulePeriod, setSchedulePeriod] = useState({
-    month: 9,
-    year: 2026,
+  const [schedule, setSchedule] = useState({});
+  const [schedulePeriod, setSchedulePeriod] = useState(() => {
+    const now = new Date();
+    return { month: now.getMonth() + 1, year: now.getFullYear() };
   });
   const [showSlabTimes, setShowSlabTimes] = useState(false);
   const [active, setActive] = useState("calendar");
@@ -187,6 +186,9 @@ export default function App() {
                 schedule={{ events: schedule, period: schedulePeriod }}
                 showSlabTimes={showSlabTimes}
                 timeZone={displayTimeZone}
+                onToggleSlabTimes={() =>
+                  setShowSlabTimes((showTimes) => !showTimes)
+                }
                 onOpenSettings={() => setActive("settings")}
                 onLogout={logout}
               />
@@ -200,8 +202,6 @@ export default function App() {
                 setTheme={setTheme}
                 profile={profile}
                 setProfile={setProfile}
-                showSlabTimes={showSlabTimes}
-                setShowSlabTimes={setShowSlabTimes}
                 schedule={schedule}
                 onAddSchedule={addSchedule}
                 onDeleteSchedule={deleteSchedule}

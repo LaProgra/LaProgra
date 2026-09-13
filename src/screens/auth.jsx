@@ -7,6 +7,7 @@ import {
   CloudUpload,
   FileSpreadsheet,
   HelpCircle,
+  Link2,
   LockKeyhole,
   Mail,
   MapPin,
@@ -208,7 +209,25 @@ export function Onboarding({
   const [importedCount, setImportedCount] = useState(0);
   const [importedPeriod, setImportedPeriod] = useState(null);
   const [parsedSchedule, setParsedSchedule] = useState(null);
+  const [scheduleSavedByServer, setScheduleSavedByServer] = useState(false);
+  const [webcalUrl, setWebcalUrl] = useState("");
   const fileRef = useRef(null);
+  const showImportedSchedule = (parsed, savedByServer = false) => {
+    const count = Object.values(parsed.events).flat().length;
+    if (!count) {
+      throw new Error("No se han encontrado actividades en la programación.");
+    }
+    setSchedule(parsed.events);
+    setSchedulePeriod(parsed.period);
+    setImportedPeriod(parsed.period);
+    setImportedCount(count);
+    setParsedSchedule(parsed.events);
+    setScheduleSavedByServer(savedByServer);
+    setTimeout(() => setFileState("success"), 1150);
+  };
+  const completeImport = (text) => {
+    showImportedSchedule(importSchedule(text, airline));
+  };
   const processFile = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -217,13 +236,7 @@ export function Onboarding({
     file
       .text()
       .then((text) => {
-        const parsed = importSchedule(text, airline);
-        setSchedule(parsed.events);
-        setSchedulePeriod(parsed.period);
-        setImportedPeriod(parsed.period);
-        setImportedCount(Object.values(parsed.events).flat().length);
-        setParsedSchedule(parsed.events);
-        setTimeout(() => setFileState("success"), 1150);
+        completeImport(text);
       })
       .catch((error) => {
         console.error("No se pudo importar la programación", error);
@@ -232,6 +245,30 @@ export function Onboarding({
         );
         setFileState("idle");
       });
+  };
+  const processWebcal = async () => {
+    if (!webcalUrl.trim()) return;
+    setFileState("loading");
+    setImportError("");
+    try {
+      const { data, error } = await supabase.functions.invoke("swiftair-sync", {
+        body: { webcalUrl: webcalUrl.trim() },
+      });
+      if (error) {
+        const errorBody = await error.context?.json?.().catch(() => null);
+        throw new Error(errorBody?.error || error.message);
+      }
+      if (!data?.events) {
+        throw new Error("La sincronización no ha devuelto una programación válida.");
+      }
+      showImportedSchedule(data, true);
+    } catch (error) {
+      console.error("No se pudo importar la programación de Swiftair", error);
+      setImportError(
+        error instanceof Error ? error.message : "No se ha podido leer el calendario.",
+      );
+      setFileState("idle");
+    }
   };
   const next = async () => {
     if (step < 3) {
@@ -248,7 +285,9 @@ export function Onboarding({
     setProfile(profileData);
     if (userId) {
       await saveProfile(userId, profileData);
-      if (parsedSchedule) await saveScheduleEvents(userId, parsedSchedule);
+      if (parsedSchedule && !scheduleSavedByServer) {
+        await saveScheduleEvents(userId, parsedSchedule);
+      }
     }
     onFinish();
   };
@@ -294,10 +333,19 @@ export function Onboarding({
                     />
                     <select
                       value={airline}
-                      onChange={(e) => setAirline(e.target.value)}
+                      onChange={(e) => {
+                        setAirline(e.target.value);
+                        setFileState("idle");
+                        setImportError("");
+                        setParsedSchedule(null);
+                        setScheduleSavedByServer(false);
+                        setImportedCount(0);
+                        setImportedPeriod(null);
+                      }}
                       className="min-h-12 w-full appearance-none rounded-[14px] border border-black/10 bg-white pl-11 pr-10 text-[15px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-white/10 dark:bg-white/[.045] dark:focus:ring-blue-950"
                     >
                       <option>Iberia</option>
+                      <option value="Swiftair">Swiftair · WT</option>
                       <option disabled>Más aerolíneas próximamente</option>
                     </select>
                   </div>
@@ -341,9 +389,23 @@ export function Onboarding({
                 Trae tu programación.
               </h1>
               <p className="mt-3 max-w-lg text-slate-600 dark:text-slate-400">
-                Selecciona el archivo CSV recibido de Iberia. LaProgra
-                interpretará las actividades reconocidas.
+                {airline === "Swiftair"
+                  ? "Pega el enlace webcal de Swiftair. LaProgra interpretará los eventos de tu programación."
+                  : "Selecciona el archivo CSV recibido de Iberia. LaProgra interpretará las actividades reconocidas."}
               </p>
+              {airline === "Swiftair" && (
+                <div className="mt-6">
+                  <Input
+                    label="Enlace webcal"
+                    icon={Link2}
+                    type="url"
+                    value={webcalUrl}
+                    onChange={(event) => setWebcalUrl(event.target.value)}
+                    placeholder="webcal://…"
+                    hint="El enlace debe ser accesible sin iniciar sesión."
+                  />
+                </div>
+              )}
               <input
                 ref={fileRef}
                 className="hidden"
@@ -352,8 +414,16 @@ export function Onboarding({
                 onChange={processFile}
               />
               <button
-                onClick={() => fileRef.current?.click()}
-                className={`mt-8 flex min-h-[245px] w-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed p-7 text-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${fileState === "success" ? "border-emerald-300 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/20" : "border-slate-300 bg-white hover:border-blue-400 hover:bg-blue-50/30 dark:border-white/15 dark:bg-[#14171A] dark:hover:border-blue-700"}`}
+                onClick={() =>
+                  airline === "Swiftair"
+                    ? processWebcal()
+                    : fileRef.current?.click()
+                }
+                disabled={
+                  fileState === "loading" ||
+                  (airline === "Swiftair" && !webcalUrl.trim())
+                }
+                className={`mt-8 flex min-h-[245px] w-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed p-7 text-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45 ${fileState === "success" ? "border-emerald-300 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/20" : "border-slate-300 bg-white hover:border-blue-400 hover:bg-blue-50/30 dark:border-white/15 dark:bg-[#14171A] dark:hover:border-blue-700"}`}
               >
                 {fileState === "idle" && (
                   <>
@@ -361,10 +431,14 @@ export function Onboarding({
                       <CloudUpload size={26} />
                     </div>
                     <h2 className="mt-5 text-lg font-semibold">
-                      Selecciona o arrastra tu CSV
+                      {airline === "Swiftair"
+                        ? "Importa tu enlace webcal"
+                        : "Selecciona o arrastra tu CSV"}
                     </h2>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                      Archivo de programación de Iberia · Máx. 10 MB
+                      {airline === "Swiftair"
+                        ? "Calendario de programación de Swiftair"
+                        : "Archivo de programación de Iberia · Máx. 10 MB"}
                     </p>
                   </>
                 )}
@@ -396,7 +470,9 @@ export function Onboarding({
                         ` · ${new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(importedPeriod.year, importedPeriod.month - 1, 1))}`}
                     </p>
                     <span className="mt-4 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                      Pulsa para sustituir el archivo
+                      {airline === "Swiftair"
+                        ? "Pulsa para actualizar desde el enlace"
+                        : "Pulsa para sustituir el archivo"}
                     </span>
                   </>
                 )}
@@ -404,12 +480,18 @@ export function Onboarding({
               <div className="mt-5 flex gap-3 rounded-[16px] bg-slate-100 p-4 text-sm text-slate-600 dark:bg-white/[.05] dark:text-slate-400">
                 <LockKeyhole size={18} className="mt-0.5 shrink-0" />
                 <p>
-                  La columna{" "}
-                  <strong className="text-slate-800 dark:text-slate-200">
-                    Description
-                  </strong>{" "}
-                  se descarta por completo durante la importación y no se
-                  conserva.
+                  {airline === "Swiftair" ? (
+                    "El enlace se guarda para mantener tu programación actualizada automáticamente."
+                  ) : (
+                    <>
+                      La columna{" "}
+                      <strong className="text-slate-800 dark:text-slate-200">
+                        Description
+                      </strong>{" "}
+                      se descarta por completo durante la importación y no se
+                      conserva.
+                    </>
+                  )}
                 </p>
               </div>
               {importError && (
@@ -433,8 +515,8 @@ export function Onboarding({
                 Todo listo.
               </h1>
               <p className="mt-3 max-w-lg text-slate-600 dark:text-slate-400">
-                Tu calendario ya está preparado. Las horas se muestran en
-                horario local de Madrid.
+                Tu calendario ya está preparado. Las horas se muestran en el
+                huso horario de tu base.
               </p>
               <div className="mt-8 overflow-hidden rounded-[22px] border border-black/[.06] bg-white dark:border-white/[.07] dark:bg-[#14171A]">
                 {[
@@ -450,7 +532,7 @@ export function Onboarding({
                     "Importación",
                     fileState === "success"
                       ? `${importedCount} ${importedCount === 1 ? "actividad" : "actividades"}`
-                      : "Datos de demostración",
+                      : "Sin programación importada",
                   ],
                 ].map(([Icon, label, value], i) => (
                   <div

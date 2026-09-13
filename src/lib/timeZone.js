@@ -94,21 +94,27 @@ export function formatFirmaTime(event, timeZone) {
   return event?.firmaTime || "";
 }
 
-export function getEventDisplayDate(event, timeZone) {
-  if (!event?.startsAt) {
-    return { day: event?.day, month: event?.month, year: event?.year };
-  }
-
+export function getDateInTimeZone(timeZone, instant = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: normalizeTimeZone(timeZone),
     year: "numeric",
     month: "numeric",
     day: "numeric",
-  }).formatToParts(new Date(event.startsAt));
-  const valueFor = (type) => Number(parts.find((part) => part.type === type)?.value);
+  }).formatToParts(new Date(instant));
+  const valueFor = (type) =>
+    Number(parts.find((part) => part.type === type)?.value);
+
   return {
     day: valueFor("day"),
     month: valueFor("month"),
     year: valueFor("year"),
   };
+}
+
+export function getEventDisplayDate(event, timeZone) {
+  if (!event?.startsAt) {
+    return { day: event?.day, month: event?.month, year: event?.year };
+  }
+
+  return getDateInTimeZone(timeZone, event.startsAt);
 }

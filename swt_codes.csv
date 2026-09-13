@@ -1,0 +1,105 @@
+﻿IDENT,SLAB,EXPLANATION
+LA,LA,Actividad En Aeropuerto
+LCB,LCB,Dia Libre Cambio De Base
+CS,CS,Comisión De Servicio – Auditoria
+D,D,Día Descanso
+DH,DH,Descanso En Hotel En Base
+DT,DT,Descanso Previo A Actividad No Aérea
+FDM,FDM,Reunion Fdm
+FI,FI,Inspección En Vuelo
+GS,GS,Garantía Sindical
+IM,IM,Imaginaria (Genérica)
+IMI,IMI,Imaginaria Asignada A Tripulante Inexperto / En Instrucción
+LX,LX,Día Libre Solicitado
+L,L,Día Libre
+LR,LR,Día Libre Recuperado
+LN,LN,Libre Sin Noches Locales
+LT / LTR,LT / LTR,Libre Trabajado
+N,N,Reserva Posicionamiento
+ND,ND,No Disponible Para Vuelo
+NQ,NQ,Baja En Compañía
+NS,NS,No Presentado
+OC,OC,Oficina
+RE,RE,Reserva
+REI,REI,Reserva Asignada A Tripulante En Instrucción
+RF,RF,Reunion De Jefes De Flota
+RJ,RJ,Reducción De Jornada
+RM,RM,Reconocimiento Medico
+SI,SI,Simulator Inspector
+V,V,Vacaciones (Día Natural)
+VR,VR,Vacaciones (Día Natural) Recuperadas Del Año Anterior
+VL,VL,Vacaciones (Día Laborable)
+VB,VB,Permiso De Boda
+VN,VN,Permiso Nacimiento
+X,X,Baja Medica
+XX,XX,Tripulante No De Alta En Swt
+*,*,Posicionamiento Con Posible Fdp
+CM,CM,Curso Crm 
+CR,CR,Curso Presencial 
+CRE,CRE,Curso Presencial Actividad Aérea Con Extensión
+CRE (training),CRET,Curso Presencial Instrucción En Línea Fo
+CRF (training),CRF,Curso Presencial Instrucción En Línea Fam
+CRM,CRM,Curso Presencial Memo
+CRM (training),CRM,Curso Presencial Instrucción En Línea Mat
+CRN,CRN,Curso Presencial Notificación Pendiente
+CRO (training),CRO,Curso Presencial Otra Instrucción En Línea
+CRP (training),CRP,Curso Presencial Instrucción En Línea Cp
+CRR,CRR,Curso Presencial Actividad Solicitada
+CRS,CRS,Curso Presencial Cambio Personal
+CRT,CRT,Curso Presencial Instrucción En Línea Cancelada
+CRV (training),CRV,Curso Presencial Verificación En Línea
+LPC,LPC,Simulador Lpc 
+LPCE,LPCE,Simulador Lpc Actividad Aérea Con Extensión
+LPCE (training),LPCE,Simulador Lpc Instrucción En Línea Fo
+LPCF (training),LPCF,Simulador Lpc Instrucción En Línea Fam
+LPCM,LPCM,Simulador Lpc Memo
+LPCM (training),LPCM,Simulador Lpc Instrucción En Línea Mat
+LPCN,LPCN,Simulador Lpc Notificación Pendiente
+LPCO (training),LPCO,Simulador Lpc Otra Instrucción En Línea
+LPCP (training),LPCP,Simulador Lpc Instrucción En Línea Cp
+LPCR,LPCR,Simulador Lpc Actividad Solicitada
+LPCS,LPCS,Simulador Lpc Cambio Personal
+LPCT,LPCT,Simulador Lpc Instrucción En Línea Cancelada
+LPCV (training),LPCV,Simulador Lpc Verificación En Línea
+MP,MP,Curso Mercancías Peligrosas 
+SE,SE,Curso Teórico Con Avión Emergencias 
+SM,SM,Simulador 
+SME,SME,Simulador Actividad Aérea Con Extensión
+SME (training),SME,Simulador Instrucción En Línea Fo
+SMF,SMF,Simulador Instrucción En Línea Fam
+SMM,SMM,Simulador Memo
+SMM (training),SMM,Simulador Instrucción En Línea Mat
+SMN,SMN,Simulador Notificación Pendiente
+SMO,SMO,Simulador Otra Instrucción En Línea
+SMP,SMP,Simulador Instrucción En Línea Cp
+SMR,SMR,Simulador Actividad Solicitada
+SMS,SMS,Simulador Cambio Personal
+SMT,SMT,Simulador Instrucción En Línea Cancelada
+SMV,SMV,Simulador Verificación En Línea
+OL,OL,Curso Online 
+OLE,OLE,Curso Online Actividad Aérea Con Extensión
+OLE (training),OLE,Curso Online Instrucción En Línea Fo
+OLF,OLF,Curso Online Instrucción En Línea Fam
+OLM,OLM,Curso Online Memo
+OLM (training),OLM,Curso Online Instrucción En Línea Mat
+OLN,OLN,Curso Online Notificación Pendiente
+OLO,OLO,Curso Online Otra Instrucción En Línea
+OLP,OLP,Curso Online Instrucción En Línea Cp
+OLR,OLR,Curso Online Actividad Solicitada
+OLS,OLS,Curso Online Cambio Personal
+OLT,OLT,Curso Online Instrucción En Línea Cancelada
+OLV,OLV,Curso Online Verificación En Línea
+OPC,OPC,Simulador Opc 
+OPCE,OPCE,Simulador Opc Actividad Aérea Con Extensión
+OPCE (training),OPCE,Simulador Opc Instrucción En Línea Fo
+OPCF,OPCF,Simulador Opc Instrucción En Línea Fam
+OPCM,OPCM,Simulador Opc Memo
+OPCM (training),OPCM,Simulador Opc Instrucción En Línea Mat
+OPCN,OPCN,Simulador Opc Notificación Pendiente
+OPCO,OPCO,Simulador Opc Otra Instrucción En Línea
+OPCP,OPCP,Simulador Opc Instrucción En Línea Cp
+OPCR,OPCR,Simulador Opc Actividad Solicitada
+OPCS,OPCS,Simulador Opc Cambio Personal
+OPCT,OPCT,Simulador Opc Instrucción En Línea Cancelada
+OPCV,OPCV,Simulador Opc Verificación En Línea
+TR,TR,Entrenamiento Con Avión 

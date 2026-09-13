@@ -12,3 +12,19 @@ body,
 body {
   min-width: 320px;
 }
+
+.slab {
+  container-type: inline-size;
+}
+
+.slab__label {
+  font-size: clamp(7px, 13cqw, 11px);
+}
+
+.slab__time {
+  font-size: clamp(6px, 11cqw, 10px);
+}
+
+.slab__day-indicator {
+  font-size: clamp(5px, 7cqw, 7px);
+}
