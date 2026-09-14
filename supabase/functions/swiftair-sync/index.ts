@@ -207,7 +207,7 @@ function parseVEvents(text: string) {
     if (!properties) return;
 
     const property = parseIcsProperty(line);
-    if (property && ["UID", "DTSTART", "DTEND", "SUMMARY", "DESCRIPTION"].includes(property.name)) {
+    if (property && ["UID", "DTSTART", "DTEND", "SUMMARY", "DESCRIPTION", "LOCATION"].includes(property.name)) {
       properties[property.name] = property;
     }
   });
@@ -265,6 +265,70 @@ function parseReportingTime(description: string, date: DateParts) {
   return new Date(Date.UTC(date.year, date.month - 1, date.day, Number(match[1]), Number(match[2]))).toISOString();
 }
 
+type FlightLocationInterval = {
+  departure: { hours: number; minutes: number };
+  arrival: { hours: number; minutes: number };
+};
+
+function parseFlightLocationInterval(location?: string): FlightLocationInterval | null {
+  const match = (location || "").match(/\((\d{2})(\d{2})Z-(\d{2})(\d{2})Z\)/);
+  if (!match) return null;
+  return {
+    departure: { hours: Number(match[1]), minutes: Number(match[2]) },
+    arrival: { hours: Number(match[3]), minutes: Number(match[4]) },
+  };
+}
+
+// Anchors the (HHMMZ-HHMMZ) LOCATION interval to real UTC instants inside [periodStart, periodEnd].
+function resolveFlightTimesFromLocation(
+  interval: FlightLocationInterval,
+  periodStart: string,
+  periodEnd: string,
+) {
+  const periodStartMs = new Date(periodStart).getTime();
+  const periodEndMs = new Date(periodEnd || periodStart).getTime();
+  const anchor = new Date(periodStartMs);
+  const anchorYear = anchor.getUTCFullYear();
+  const anchorMonth = anchor.getUTCMonth();
+  const anchorDay = anchor.getUTCDate();
+
+  const buildCandidate = (dayOffset: number, time: { hours: number; minutes: number }) =>
+    Date.UTC(anchorYear, anchorMonth, anchorDay + dayOffset, time.hours, time.minutes);
+
+  const toleranceMs = 60_000;
+  let departureMs: number | null = null;
+  for (let offset = -1; offset <= 2; offset += 1) {
+    const candidate = buildCandidate(offset, interval.departure);
+    if (candidate >= periodStartMs - toleranceMs && candidate <= periodEndMs + toleranceMs) {
+      departureMs = candidate;
+      break;
+    }
+  }
+  if (departureMs === null) departureMs = buildCandidate(0, interval.departure);
+
+  const departureDate = new Date(departureMs);
+  let arrivalMs: number | null = null;
+  for (let offset = 0; offset <= 2; offset += 1) {
+    const candidate = Date.UTC(
+      departureDate.getUTCFullYear(),
+      departureDate.getUTCMonth(),
+      departureDate.getUTCDate() + offset,
+      interval.arrival.hours,
+      interval.arrival.minutes,
+    );
+    if (candidate >= departureMs) {
+      arrivalMs = candidate;
+      break;
+    }
+  }
+  if (arrivalMs === null) arrivalMs = departureMs;
+
+  return {
+    startsAt: new Date(departureMs).toISOString(),
+    endsAt: new Date(arrivalMs).toISOString(),
+  };
+}
+
 function classifySwiftairEvent(summary: string) {
   const token = normalizeToken(summary);
   const activity = swiftairCodesByIdent.get(token);
@@ -304,13 +368,26 @@ function parseSwiftairCalendar(text: string) {
     const summary = properties.SUMMARY?.value.trim() || "";
     const description = properties.DESCRIPTION?.value || "";
     const classified = classifySwiftairEvent(summary);
+
+    let flightTimes: { startsAt: string; endsAt: string } | null = null;
+    if (!start.isAllDay && classified.flightNumber) {
+      const interval = parseFlightLocationInterval(properties.LOCATION?.value);
+      if (interval) {
+        flightTimes = resolveFlightTimesFromLocation(
+          interval,
+          start.instant,
+          end?.instant || start.instant,
+        );
+      }
+    }
+
     return [{
       uid: properties.UID?.value || "",
       day: start.date.day,
       month: start.date.month,
       year: start.date.year,
-      startsAt: start.isAllDay ? null : start.instant,
-      endsAt: start.isAllDay ? null : end?.instant || null,
+      startsAt: start.isAllDay ? null : flightTimes?.startsAt || start.instant,
+      endsAt: start.isAllDay ? null : flightTimes?.endsAt || end?.instant || null,
       firmaAt: start.isAllDay ? null : parseReportingTime(description, getDateInUtc(start.instant)),
       ...classified,
     }];

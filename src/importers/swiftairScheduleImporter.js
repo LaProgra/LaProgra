@@ -118,7 +118,7 @@ function parseVEvents(text) {
     if (!properties) return;
 
     const property = parseIcsProperty(line);
-    if (property && ["UID", "DTSTART", "DTEND", "SUMMARY", "DESCRIPTION"].includes(property.name)) {
+    if (property && ["UID", "DTSTART", "DTEND", "SUMMARY", "DESCRIPTION", "LOCATION"].includes(property.name)) {
       properties[property.name] = property;
     }
   });
@@ -198,6 +198,61 @@ function parseReportingTime(description, date) {
   ).toISOString();
 }
 
+function parseFlightLocationInterval(location) {
+  const match = (location || "").match(/\((\d{2})(\d{2})Z-(\d{2})(\d{2})Z\)/);
+  if (!match) return null;
+  return {
+    departure: { hours: Number(match[1]), minutes: Number(match[2]) },
+    arrival: { hours: Number(match[3]), minutes: Number(match[4]) },
+  };
+}
+
+// Anchors the (HHMMZ-HHMMZ) LOCATION interval to real UTC instants inside [periodStart, periodEnd].
+function resolveFlightTimesFromLocation(interval, periodStart, periodEnd) {
+  const periodStartMs = new Date(periodStart).getTime();
+  const periodEndMs = new Date(periodEnd || periodStart).getTime();
+  const anchor = new Date(periodStartMs);
+  const anchorYear = anchor.getUTCFullYear();
+  const anchorMonth = anchor.getUTCMonth();
+  const anchorDay = anchor.getUTCDate();
+
+  const buildCandidate = (dayOffset, time) =>
+    Date.UTC(anchorYear, anchorMonth, anchorDay + dayOffset, time.hours, time.minutes);
+
+  const toleranceMs = 60_000;
+  let departureMs = null;
+  for (let offset = -1; offset <= 2; offset += 1) {
+    const candidate = buildCandidate(offset, interval.departure);
+    if (candidate >= periodStartMs - toleranceMs && candidate <= periodEndMs + toleranceMs) {
+      departureMs = candidate;
+      break;
+    }
+  }
+  if (departureMs === null) departureMs = buildCandidate(0, interval.departure);
+
+  const departureDate = new Date(departureMs);
+  let arrivalMs = null;
+  for (let offset = 0; offset <= 2; offset += 1) {
+    const candidate = Date.UTC(
+      departureDate.getUTCFullYear(),
+      departureDate.getUTCMonth(),
+      departureDate.getUTCDate() + offset,
+      interval.arrival.hours,
+      interval.arrival.minutes,
+    );
+    if (candidate >= departureMs) {
+      arrivalMs = candidate;
+      break;
+    }
+  }
+  if (arrivalMs === null) arrivalMs = departureMs;
+
+  return {
+    startsAt: new Date(departureMs).toISOString(),
+    endsAt: new Date(arrivalMs).toISOString(),
+  };
+}
+
 function classifySwiftairEvent(summary) {
   const token = normalizeToken(summary);
   const activity = swiftairCodesByIdent.get(token);
@@ -246,13 +301,26 @@ export function importSwiftairSchedule(text) {
     const summary = properties.SUMMARY?.value.trim() || "";
     const description = properties.DESCRIPTION?.value || "";
     const classified = classifySwiftairEvent(summary);
+
+    let flightTimes = null;
+    if (!start.isAllDay && classified.flightNumber) {
+      const interval = parseFlightLocationInterval(properties.LOCATION?.value);
+      if (interval) {
+        flightTimes = resolveFlightTimesFromLocation(
+          interval,
+          start.instant,
+          end?.instant || start.instant,
+        );
+      }
+    }
+
     const event = {
       uid: properties.UID?.value || "",
       day: start.date.day,
       month: start.date.month,
       year: start.date.year,
-      startsAt: start.isAllDay ? null : start.instant,
-      endsAt: start.isAllDay ? null : end?.instant || null,
+      startsAt: start.isAllDay ? null : flightTimes?.startsAt || start.instant,
+      endsAt: start.isAllDay ? null : flightTimes?.endsAt || end?.instant || null,
       firmaAt: start.isAllDay
         ? null
         : parseReportingTime(
