@@ -49,9 +49,8 @@ export default function App() {
       username: profileRow.username,
       displayTimeZone: profileRow.display_time_zone || "base",
     });
-    const { events, period } = await loadScheduleEvents(userId);
+    const { events } = await loadScheduleEvents(userId);
     setSchedule(events);
-    if (period) setSchedulePeriod(period);
     setScreen("app");
   };
 

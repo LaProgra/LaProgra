@@ -106,7 +106,9 @@ export function CalendarView({
   const [selected, setSelected] = useState(null);
   const [profileMenu, setProfileMenu] = useState(false);
   const scheduleEvents = schedule.events || schedule;
-  const schedulePeriod = schedule.period || { month: 9, year: 2026 };
+  const now = new Date();
+  const schedulePeriod =
+    schedule.period || { month: now.getMonth() + 1, year: now.getFullYear() };
   const [visiblePeriod, setVisiblePeriod] = useState(schedulePeriod);
 
   useEffect(() => {
