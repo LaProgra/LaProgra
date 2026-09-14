@@ -47,15 +47,27 @@ const TRAINING_CODES = new Set([
   "CM", "CR", "FDM", "FI", "LPC", "MP", "OL", "OPC", "SE", "SI", "SM", "TR",
 ]);
 
-const appOrigin = Deno.env.get("APP_ORIGIN") || "*";
-const corsHeaders = {
-  ...supabaseCorsHeaders,
-  "Access-Control-Allow-Origin": appOrigin,
-  Vary: "Origin",
-};
+const appOrigins = (Deno.env.get("APP_ORIGIN") || "*")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-function responseJson(body: unknown, status = 200) {
-  return Response.json(body, { status, headers: corsHeaders });
+function resolveAllowedOrigin(request: Request) {
+  if (appOrigins.includes("*")) return "*";
+  const origin = request.headers.get("origin") || "";
+  return appOrigins.includes(origin) ? origin : appOrigins[0] || "";
+}
+
+function corsHeadersFor(request: Request) {
+  return {
+    ...supabaseCorsHeaders,
+    "Access-Control-Allow-Origin": resolveAllowedOrigin(request),
+    Vary: "Origin",
+  };
+}
+
+function responseJson(body: unknown, status = 200, headers: HeadersInit = supabaseCorsHeaders) {
+  return Response.json(body, { status, headers });
 }
 
 function getPublishableKey() {
@@ -639,28 +651,29 @@ async function runCronSync() {
 }
 
 Deno.serve(async (request) => {
+  const corsHeaders = corsHeadersFor(request);
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (request.method !== "POST") return responseJson({ error: "Método no permitido." }, 405);
+  if (request.method !== "POST") return responseJson({ error: "Método no permitido." }, 405, corsHeaders);
 
   try {
     const body = await request.json().catch(() => ({})) as { mode?: string; webcalUrl?: string };
     if (body.mode === "cron") {
       if (!constantTimeEquals(request.headers.get("x-swiftair-cron-secret"), Deno.env.get("SWIFTAIR_CRON_SECRET"))) {
-        return responseJson({ error: "No autorizado." }, 401);
+        return responseJson({ error: "No autorizado." }, 401, corsHeaders);
       }
-      return responseJson(await runCronSync());
+      return responseJson(await runCronSync(), 200, corsHeaders);
     }
 
     const userId = await getUserId(request);
-    if (!userId) return responseJson({ error: "Sesión no válida." }, 401);
+    if (!userId) return responseJson({ error: "Sesión no válida." }, 401, corsHeaders);
     if (!body.webcalUrl || typeof body.webcalUrl !== "string") {
-      return responseJson({ error: "Falta el enlace webcal." }, 400);
+      return responseJson({ error: "Falta el enlace webcal." }, 400, corsHeaders);
     }
-    return responseJson(await syncCalendar(userId, body.webcalUrl, true));
+    return responseJson(await syncCalendar(userId, body.webcalUrl, true), 200, corsHeaders);
   } catch (error) {
     console.error("Error al sincronizar Swiftair", error instanceof Error ? error.message : error);
     return responseJson({
       error: error instanceof Error ? error.message : "No se ha podido sincronizar el calendario.",
-    }, 502);
+    }, 502, corsHeaders);
   }
 });
