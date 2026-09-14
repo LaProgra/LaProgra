@@ -186,7 +186,7 @@ export function CalendarView({
             Calendario
           </h1>
           <p className="text-sm text-slate-500">
-            Tu programación de un vistazo
+            Tu programación de un vistazo.
           </p>
         </div>
         <div className="flex items-center gap-1.5">
