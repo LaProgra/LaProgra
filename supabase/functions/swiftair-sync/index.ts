@@ -559,7 +559,10 @@ async function syncCalendar(userId: string, rawUrl: string, saveSource: boolean)
     if (error) throw error;
   }
 
-  const eventsToInsert = recentEvents;
+  // Se insertan en orden cronológico: el ICS no viene ordenado por fecha.
+  const eventsToInsert = recentEvents
+    .slice()
+    .sort((a, b) => eventTimestamp(a) - eventTimestamp(b));
   if (eventsToInsert.length) {
     const { data: insertedEvents, error } = await admin
       .from("schedule_events")

@@ -111,6 +111,12 @@ function scheduleRows(userId, eventsByDay) {
   );
 }
 
+function eventTimestamp(event) {
+  return event.startsAt
+    ? new Date(event.startsAt).getTime()
+    : Date.UTC(event.year, event.month - 1, event.day);
+}
+
 export async function loadScheduleEvents(userId) {
   const { data, error } = await supabase
     .from("schedule_events")
@@ -137,5 +143,10 @@ export async function loadScheduleEvents(userId) {
     });
     if (!period) period = { month: row.month, year: row.year };
   });
+  // Las filas llegan en el orden de inserción (el ICS no es cronológico), así
+  // que los eventos de cada día se ordenan por instante de inicio.
+  Object.values(eventsByDay).forEach((dayEvents) =>
+    dayEvents.sort((a, b) => eventTimestamp(a) - eventTimestamp(b)),
+  );
   return { events: eventsByDay, period };
 }
