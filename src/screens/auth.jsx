@@ -251,8 +251,9 @@ export function Onboarding({
     setFileState("loading");
     setImportError("");
     try {
+      const sanitizedUrl = webcalUrl.trim().replace(/^webcal/i, "https");
       const { data, error } = await supabase.functions.invoke("swiftair-sync", {
-        body: { webcalUrl: webcalUrl.trim() },
+        body: { webcalUrl: sanitizedUrl },
       });
       if (error) {
         const errorBody = await error.context?.json?.().catch(() => null);
