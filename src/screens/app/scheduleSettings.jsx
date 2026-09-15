@@ -112,8 +112,8 @@ export function ScheduleSettings({
       }
       setImportSuccess(
         result?.syncedEvents > 0
-          ? `Programación actualizada · ${result.syncedEvents} ${result.syncedEvents === 1 ? "actividad nueva" : "actividades nuevas"}.`
-          : "Tu programación ya estaba al día.",
+          ? `Programación reimportada · ${result.syncedEvents} ${result.syncedEvents === 1 ? "actividad cargada" : "actividades cargadas"}.`
+          : "Programación reimportada.",
       );
     } catch (error) {
       console.error("No se pudo reimportar la programación", error);

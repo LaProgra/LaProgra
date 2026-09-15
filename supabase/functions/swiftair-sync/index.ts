@@ -450,25 +450,8 @@ function asScheduleRows(userId: string, events: CalendarEvent[]) {
   }));
 }
 
-function storedEventTimestamp(event: { starts_at: string | null; year: number; month: number; day: number }) {
-  return event.starts_at
-    ? new Date(event.starts_at).getTime()
-    : Date.UTC(event.year, event.month - 1, event.day);
-}
-
 function scheduleEventKey(event: Pick<CalendarEvent, "startsAt" | "year" | "month" | "day" | "label" | "flightNumber">) {
   return `${eventTimestamp(event)}|${event.label}|${event.flightNumber}`;
-}
-
-function storedScheduleEventKey(event: {
-  starts_at: string | null;
-  year: number;
-  month: number;
-  day: number;
-  label: string;
-  flight_number: string | null;
-}) {
-  return `${storedEventTimestamp(event)}|${event.label}|${event.flight_number || ""}`;
 }
 
 function constantTimeEquals(value: string | null, expected: string | undefined) {
@@ -559,42 +542,24 @@ async function syncCalendar(userId: string, rawUrl: string, saveSource: boolean)
     if (error) throw error;
   }
 
-  const { data: storedEvents, error: storedEventsError } = await admin
-    .from("schedule_events")
-    .select("starts_at, year, month, day, label, flight_number")
-    .eq("user_id", userId);
-  if (storedEventsError) throw storedEventsError;
-
   const { data: syncedEventReferences, error: syncedEventsError } = await admin
     .from("swiftair_synced_events")
     .select("schedule_event_id, starts_at, day, month, year")
     .eq("user_id", userId);
   if (syncedEventsError) throw syncedEventsError;
 
-  const nowTimestamp = now.getTime();
-  const immutableEvents = (storedEvents || []).filter(
-    (event) => storedEventTimestamp(event) <= nowTimestamp,
-  );
-  const immutableEventKeys = new Set(
-    immutableEvents.map((event) => storedScheduleEventKey(event)),
-  );
-  const idsToReplace = ((syncedEventReferences || []) as SyncedEventReference[])
-    .filter((event) => storedEventTimestamp(event) > nowTimestamp)
+  // Reemplazo completo: se borran todos los eventos importados desde el enlace
+  // y se cargan los nuevos desde cero. Los eventos añadidos por otros medios
+  // (sin referencia en swiftair_synced_events) no se tocan. Las referencias se
+  // limpian en cascada al borrar los eventos.
+  const idsToDelete = ((syncedEventReferences || []) as SyncedEventReference[])
     .map((event) => event.schedule_event_id);
-  if (idsToReplace.length) {
-    const { error } = await admin.from("schedule_events").delete().in("id", idsToReplace);
+  if (idsToDelete.length) {
+    const { error } = await admin.from("schedule_events").delete().in("id", idsToDelete);
     if (error) throw error;
   }
 
-  // La primera importación completa el histórico reciente sin duplicar lo que ya
-  // existía. Las sincronizaciones posteriores no tocan ningún evento iniciado.
-  const eventsToInsert = knownSource
-    ? recentEvents.filter((event) => eventTimestamp(event) > nowTimestamp)
-    : recentEvents.filter(
-        (event) =>
-          eventTimestamp(event) > nowTimestamp ||
-          !immutableEventKeys.has(scheduleEventKey(event)),
-      );
+  const eventsToInsert = recentEvents;
   if (eventsToInsert.length) {
     const { data: insertedEvents, error } = await admin
       .from("schedule_events")
