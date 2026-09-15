@@ -33,18 +33,43 @@ export function Login({ onContinue, theme, setTheme }) {
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const submit = async () => {
     setTouched(true);
     setAuthError("");
     if (!email || !password) return;
     setLoading(true);
-    const { error } =
-      mode === "signIn"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+    if (mode === "signIn") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      setLoading(false);
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+      onContinue();
+      return;
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: window.location.origin },
+    });
     setLoading(false);
     if (error) {
       setAuthError(error.message);
+      return;
+    }
+    // email inválido/duplicado: Supabase responde sin error pero sin identidades nuevas
+    if (data.user && data.user.identities?.length === 0) {
+      setAuthError("Ya existe una cuenta con ese correo. Inicia sesión.");
+      return;
+    }
+    // sin confirmación de correo aún no hay sesión: hay que esperar al enlace de verificación
+    if (!data.session) {
+      setConfirmationSent(true);
       return;
     }
     onContinue();
@@ -52,6 +77,39 @@ export function Login({ onContinue, theme, setTheme }) {
   const continueWithGoogle = () => {
     supabase.auth.signInWithOAuth({ provider: "google" });
   };
+  if (confirmationSent) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F5F6F8] px-5 text-slate-950 dark:bg-[#090B10] dark:text-white">
+        <div className="mx-auto w-full max-w-[430px] rounded-[26px] border border-black/[.06] bg-white/90 p-7 text-center shadow-[0_18px_60px_rgba(20,23,28,.08)] backdrop-blur-xl dark:border-white/[.08] dark:bg-[#14171A]/90">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-blue-50 text-[#176BFF] dark:bg-blue-950/60">
+            <Mail size={26} />
+          </div>
+          <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em]">
+            Confirma tu correo
+          </h2>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Hemos enviado un enlace de confirmación a{" "}
+            <strong className="text-slate-700 dark:text-slate-200">
+              {email}
+            </strong>
+            . Ábrelo para activar tu cuenta y continuar.
+          </p>
+          <Button
+            variant="secondary"
+            className="mt-6 w-full"
+            onClick={() => {
+              setConfirmationSent(false);
+              setMode("signIn");
+              setPassword("");
+              setTouched(false);
+            }}
+          >
+            Volver a iniciar sesión
+          </Button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#F5F6F8] text-slate-950 dark:bg-[#090B10] dark:text-white">
       <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-400/10 blur-3xl" />
