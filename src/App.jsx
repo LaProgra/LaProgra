@@ -14,6 +14,7 @@ import {
   deleteScheduleMonth,
   saveAdditionalScheduleEvents,
   saveProfile,
+  syncSwiftairSchedule,
 } from "./lib/scheduleService";
 import { getDisplayTimeZone } from "./lib/timeZone";
 
@@ -105,6 +106,17 @@ export default function App() {
       return merged;
     });
     if (period) setSchedulePeriod(period);
+  };
+  const syncSchedule = async (webcalUrl) => {
+    if (!session?.user?.id) {
+      throw new Error("Sesión no válida.");
+    }
+    const result = await syncSwiftairSchedule(webcalUrl);
+    // La sincronización solo reemplaza los eventos futuros en la base de
+    // datos, así que el estado local se recarga desde ahí (fuente de verdad).
+    const { events } = await loadScheduleEvents(session.user.id);
+    setSchedule(events);
+    return result;
   };
   const deleteSchedule = async ({ month, year }) => {
     if (session?.user?.id) {
@@ -204,6 +216,8 @@ export default function App() {
                 schedule={schedule}
                 onAddSchedule={addSchedule}
                 onDeleteSchedule={deleteSchedule}
+                onSyncSchedule={syncSchedule}
+                userId={session?.user?.id}
                 onLogout={logout}
                 onBack={() => setActive("calendar")}
               />

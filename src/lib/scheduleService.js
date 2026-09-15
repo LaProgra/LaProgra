@@ -68,6 +68,30 @@ export async function deleteScheduleMonth(userId, month, year) {
   if (error) throw error;
 }
 
+export async function loadSwiftairCalendarSource(userId) {
+  const { data, error } = await supabase
+    .from("swiftair_calendar_sources")
+    .select("webcal_url")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.webcal_url || "";
+}
+
+export async function syncSwiftairSchedule(webcalUrl) {
+  const { data, error } = await supabase.functions.invoke("swiftair-sync", {
+    body: { webcalUrl },
+  });
+  if (error) {
+    const errorBody = await error.context?.json?.().catch(() => null);
+    throw new Error(errorBody?.error || error.message);
+  }
+  if (!data?.events) {
+    throw new Error("La sincronización no ha devuelto una programación válida.");
+  }
+  return data;
+}
+
 function scheduleRows(userId, eventsByDay) {
   return Object.entries(eventsByDay).flatMap(([day, dayEvents]) =>
     dayEvents.map((event) => ({

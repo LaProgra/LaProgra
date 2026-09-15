@@ -19,6 +19,8 @@ export function SettingsView({
   schedule,
   onAddSchedule,
   onDeleteSchedule,
+  onSyncSchedule,
+  userId,
   onBack,
 }) {
   const [editing, setEditing] = useState(false);
@@ -146,6 +148,8 @@ export function SettingsView({
         schedule={schedule}
         onAddSchedule={onAddSchedule}
         onDeleteSchedule={onDeleteSchedule}
+        onSyncSchedule={onSyncSchedule}
+        userId={userId}
       />
       <Button
         variant="ghost"

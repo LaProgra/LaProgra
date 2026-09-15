@@ -20,7 +20,11 @@ import {
 import { getAirportCity, importSchedule } from "../importers";
 import { Button, Input, LaPrograMark } from "../components/shared";
 import { supabase } from "../lib/supabaseClient";
-import { saveProfile, saveScheduleEvents } from "../lib/scheduleService";
+import {
+  saveProfile,
+  saveScheduleEvents,
+  syncSwiftairSchedule,
+} from "../lib/scheduleService";
 
 export function Login({ onContinue, theme, setTheme }) {
   const [mode, setMode] = useState("signIn");
@@ -252,16 +256,7 @@ export function Onboarding({
     setImportError("");
     try {
       const sanitizedUrl = webcalUrl.trim().replace(/^webcal/i, "https");
-      const { data, error } = await supabase.functions.invoke("swiftair-sync", {
-        body: { webcalUrl: sanitizedUrl },
-      });
-      if (error) {
-        const errorBody = await error.context?.json?.().catch(() => null);
-        throw new Error(errorBody?.error || error.message);
-      }
-      if (!data?.events) {
-        throw new Error("La sincronización no ha devuelto una programación válida.");
-      }
+      const data = await syncSwiftairSchedule(sanitizedUrl);
       showImportedSchedule(data, true);
     } catch (error) {
       console.error("No se pudo importar la programación de Swiftair", error);

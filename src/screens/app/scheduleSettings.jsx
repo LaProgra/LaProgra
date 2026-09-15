@@ -1,13 +1,25 @@
-import { useRef, useState } from "react";
-import { Trash2, Upload } from "lucide-react";
-import { importSchedule } from "../../importers";
-import { Button } from "../../components/shared";
+import { useEffect, useRef, useState } from "react";
+import { Link2, RefreshCw, Trash2, Upload } from "lucide-react";
+import { getScheduleImportMethod, importSchedule } from "../../importers";
+import { loadSwiftairCalendarSource } from "../../lib/scheduleService";
+import { Button, Input } from "../../components/shared";
+
+function maskCalendarUrl(url) {
+  try {
+    const parsed = new URL(url.replace(/^webcals?/i, "https"));
+    return `webcal://${parsed.host}/••••••••`;
+  } catch {
+    return "webcal://••••••••";
+  }
+}
 
 export function ScheduleSettings({
   airline,
   schedule,
   onAddSchedule,
   onDeleteSchedule,
+  onSyncSchedule,
+  userId,
 }) {
   const [importingSchedule, setImportingSchedule] = useState(false);
   const [importError, setImportError] = useState("");
@@ -16,7 +28,28 @@ export function ScheduleSettings({
     useState(false);
   const [deletingSchedule, setDeletingSchedule] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("");
+  const [storedUrl, setStoredUrl] = useState("");
+  const [webcalUrl, setWebcalUrl] = useState("");
+  const [loadingSource, setLoadingSource] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const scheduleFileRef = useRef(null);
+  const importMethod = getScheduleImportMethod(airline);
+  const isWebcal = importMethod === "webcal";
+
+  useEffect(() => {
+    if (!isWebcal || !userId) return;
+    setLoadingSource(true);
+    setStoredUrl("");
+    setWebcalUrl("");
+    loadSwiftairCalendarSource(userId)
+      .then(setStoredUrl)
+      .catch((error) => {
+        console.error("No se pudo cargar el enlace del calendario", error);
+        setImportError("No se pudo cargar el enlace guardado.");
+      })
+      .finally(() => setLoadingSource(false));
+  }, [isWebcal, userId]);
+
   const schedulePeriods = [
     ...new Map(
       Object.values(schedule)
@@ -63,6 +96,37 @@ export function ScheduleSettings({
     }
   };
 
+  const reimportSchedule = async () => {
+    const effectiveUrl = webcalUrl.trim() || storedUrl;
+    if (!effectiveUrl || !onSyncSchedule) return;
+    setSyncing(true);
+    setImportError("");
+    setImportSuccess("");
+    try {
+      const result = await onSyncSchedule(effectiveUrl);
+      // Si el usuario pegó un enlace nuevo, la edge function ya lo ha guardado
+      // sustituyendo al anterior; se refleja y se vuelve a enmascarar.
+      if (webcalUrl.trim()) {
+        setStoredUrl(webcalUrl.trim());
+        setWebcalUrl("");
+      }
+      setImportSuccess(
+        result?.syncedEvents > 0
+          ? `Programación actualizada · ${result.syncedEvents} ${result.syncedEvents === 1 ? "actividad nueva" : "actividades nuevas"}.`
+          : "Tu programación ya estaba al día.",
+      );
+    } catch (error) {
+      console.error("No se pudo reimportar la programación", error);
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo sincronizar el calendario.",
+      );
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const deleteSelectedSchedule = async () => {
     if (!selectedSchedulePeriod) return;
     setDeletingSchedule(true);
@@ -93,31 +157,74 @@ export function ScheduleSettings({
         Programación
       </h2>
       <section className="overflow-hidden rounded-[20px] border border-black/[.06] bg-white dark:border-white/[.07] dark:bg-[#14171A]">
-        <div className="flex items-center gap-4 p-5">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#176BFF] dark:bg-blue-950/50">
-            <Upload size={19} />
+        {isWebcal ? (
+          <div className="flex items-center gap-4 p-5">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-[#176BFF] dark:bg-blue-950/50">
+              <Link2 size={19} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Enlace del calendario</p>
+              <p className="text-xs text-slate-500">
+                Tu programación se sincroniza automáticamente desde este enlace.
+              </p>
+              <div className="mt-3 max-w-sm">
+                <Input
+                  aria-label="Enlace webcal del calendario"
+                  icon={Link2}
+                  type="url"
+                  value={webcalUrl || (loadingSource ? "" : maskCalendarUrl(storedUrl))}
+                  onChange={(event) => setWebcalUrl(event.target.value)}
+                  onFocus={() => {
+                    // El enlace guardado se muestra enmascarado; al enfocar se
+                    // limpia para pegar uno nuevo sin exponer el token.
+                    if (!webcalUrl) setWebcalUrl("");
+                  }}
+                  placeholder={
+                    loadingSource
+                      ? "Cargando enlace guardado…"
+                      : storedUrl
+                        ? "Pega el nuevo enlace para sustituirlo"
+                        : "webcal://…"
+                  }
+                  disabled={loadingSource || syncing}
+                />
+              </div>
+            </div>
+            <Button
+              onClick={reimportSchedule}
+              disabled={loadingSource || syncing || !(webcalUrl.trim() || storedUrl)}
+            >
+              <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
+              {syncing ? "Reimportando…" : "Reimportar"}
+            </Button>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Añadir programación</p>
-            <p className="text-xs text-slate-500">
-              Importa otro CSV sin eliminar los meses anteriores.
-            </p>
+        ) : (
+          <div className="flex items-center gap-4 p-5">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#176BFF] dark:bg-blue-950/50">
+              <Upload size={19} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Añadir programación</p>
+              <p className="text-xs text-slate-500">
+                Importa otro CSV sin eliminar los meses anteriores.
+              </p>
+            </div>
+            <input
+              ref={scheduleFileRef}
+              className="hidden"
+              type="file"
+              accept=".csv,text/csv"
+              onChange={importAdditionalSchedule}
+            />
+            <Button
+              onClick={() => scheduleFileRef.current?.click()}
+              disabled={importingSchedule}
+            >
+              <Upload size={16} />
+              {importingSchedule ? "Importando…" : "Subir CSV"}
+            </Button>
           </div>
-          <input
-            ref={scheduleFileRef}
-            className="hidden"
-            type="file"
-            accept=".csv,text/csv"
-            onChange={importAdditionalSchedule}
-          />
-          <Button
-            onClick={() => scheduleFileRef.current?.click()}
-            disabled={importingSchedule}
-          >
-            <Upload size={16} />
-            {importingSchedule ? "Importando…" : "Subir CSV"}
-          </Button>
-        </div>
+        )}
         {importSuccess && (
           <p className="border-t border-black/[.06] px-5 py-3 text-sm text-emerald-700 dark:border-white/[.07] dark:text-emerald-400">
             {importSuccess}
@@ -128,7 +235,7 @@ export function ScheduleSettings({
             {importError}
           </p>
         )}
-        {schedulePeriods.length > 0 && (
+        {!isWebcal && schedulePeriods.length > 0 && (
           <div className="border-t border-black/[.06] p-5 dark:border-white/[.07]">
             <p className="text-sm font-semibold">Borrar una programación</p>
             <p className="mt-1 text-xs text-slate-500">
