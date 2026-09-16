@@ -119,9 +119,6 @@ export function SettingsView({
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold">Modo de color</p>
-            <p className="text-xs text-slate-500">
-              Elige cómo se muestra la interfaz
-            </p>
           </div>
           <div className="flex rounded-[10px] bg-slate-100 p-1 dark:bg-white/[.06]">
             {["light", "dark"].map((colorTheme) => (
