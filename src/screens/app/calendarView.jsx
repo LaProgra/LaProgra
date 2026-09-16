@@ -9,6 +9,7 @@ import {
   Settings,
   X,
 } from "lucide-react";
+import airlinesCsv from "../../../airlines.csv?raw";
 import { activityStyles } from "../../data/activityStyles";
 import { LaPrograMark } from "../../components/shared";
 import {
@@ -18,6 +19,24 @@ import {
   formatFirmaTime,
   getEventDisplayDate,
 } from "../../lib/timeZone";
+
+function parseCsvRows(text) {
+  return text
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => line.split(",").map((cell) => cell.trim()));
+}
+
+const airlineNameByIata = new Map(
+  parseCsvRows(airlinesCsv)
+    .slice(1)
+    .map(([iata, , name]) => [iata.trim().toUpperCase(), name || ""]),
+);
+
+function getAirlineNameFromFlightNumber(flightNumber) {
+  const prefix = (flightNumber || "").trim().slice(0, 2).toUpperCase();
+  return airlineNameByIata.get(prefix) || "";
+}
 
 export function Slab({
   event,
@@ -107,6 +126,7 @@ export function CalendarView({
   const [selected, setSelected] = useState(null);
   const [profileMenu, setProfileMenu] = useState(false);
   const userInitial = (profile?.username || "U").charAt(0).toUpperCase();
+  const selectedAirlineName = getAirlineNameFromFlightNumber(selected?.flightNumber);
   const scheduleEvents = schedule.events || schedule;
   const now = new Date();
   const schedulePeriod =
@@ -380,6 +400,12 @@ export function CalendarView({
                     <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
                       Situado
                     </div>
+                    
+                  )}
+                  {selected.situated && selectedAirlineName && (
+                    <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
+                      {selectedAirlineName}
+                    </div>
                   )}
                   {selected.flightNumber?.startsWith("GRD") && (
                     <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
@@ -388,7 +414,7 @@ export function CalendarView({
                   )}
                   {selected.flightNumber?.endsWith("P") && (
                     <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
-                      vacío
+                      En vacío
                     </div>
                   )}
                 </div>
