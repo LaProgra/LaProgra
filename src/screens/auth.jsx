@@ -94,18 +94,6 @@ export function Login({ onContinue, theme, setTheme }) {
             </strong>
             . Ábrelo para activar tu cuenta y continuar.
           </p>
-          <Button
-            variant="secondary"
-            className="mt-6 w-full"
-            onClick={() => {
-              setConfirmationSent(false);
-              setMode("signIn");
-              setPassword("");
-              setTouched(false);
-            }}
-          >
-            Volver a iniciar sesión
-          </Button>
         </div>
       </div>
     );
