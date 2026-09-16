@@ -32,6 +32,10 @@ export function ScheduleSettings({
   const [webcalUrl, setWebcalUrl] = useState("");
   const [loadingSource, setLoadingSource] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [reimportModalOpen, setReimportModalOpen] = useState(false);
+  const [reimportDecision, setReimportDecision] = useState(null);
+  const [newWebcalUrl, setNewWebcalUrl] = useState("");
+  const [currentUrlModalOpen, setCurrentUrlModalOpen] = useState(false);
   const scheduleFileRef = useRef(null);
   const importMethod = getScheduleImportMethod(airline);
   const isWebcal = importMethod === "webcal";
@@ -96,18 +100,21 @@ export function ScheduleSettings({
     }
   };
 
-  const reimportSchedule = async () => {
-    const effectiveUrl = webcalUrl.trim() || storedUrl;
-    if (!effectiveUrl || !onSyncSchedule) return;
+  const reimportSchedule = async (overrideUrl) => {
+    const effectiveUrl = (overrideUrl || webcalUrl || storedUrl || "").trim();
+    if (!effectiveUrl || !onSyncSchedule) {
+      if (!storedUrl) {
+        setImportError("No hay un enlace guardado para reimportar.");
+      }
+      return;
+    }
     setSyncing(true);
     setImportError("");
     setImportSuccess("");
     try {
       const result = await onSyncSchedule(effectiveUrl);
-      // Si el usuario pegó un enlace nuevo, la edge function ya lo ha guardado
-      // sustituyendo al anterior; se refleja y se vuelve a enmascarar.
-      if (webcalUrl.trim()) {
-        setStoredUrl(webcalUrl.trim());
+      if (overrideUrl && overrideUrl.trim()) {
+        setStoredUrl(overrideUrl.trim());
         setWebcalUrl("");
       }
       setImportSuccess(
@@ -125,6 +132,31 @@ export function ScheduleSettings({
     } finally {
       setSyncing(false);
     }
+  };
+
+  const closeReimportModal = () => {
+    setReimportModalOpen(false);
+    setReimportDecision(null);
+    setNewWebcalUrl("");
+  };
+
+  const handleReimportCurrent = async () => {
+    closeReimportModal();
+    if (!storedUrl) {
+      setImportError("No hay un enlace guardado para reimportar.");
+      return;
+    }
+    await reimportSchedule(storedUrl);
+  };
+
+  const handleReimportNew = async () => {
+    const nextUrl = newWebcalUrl.trim();
+    if (!nextUrl) {
+      setImportError("Pega el enlace nuevo antes de importar.");
+      return;
+    }
+    closeReimportModal();
+    await reimportSchedule(nextUrl);
   };
 
   const deleteSelectedSchedule = async () => {
@@ -163,36 +195,22 @@ export function ScheduleSettings({
               <Link2 size={19} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Enlace del calendario</p>
+              <p className="text-sm font-semibold">Enlace webcal</p>
               <p className="text-xs text-slate-500">
-                Tu programación se sincroniza automáticamente desde este enlace.
+                Tu programación se sincroniza automáticamente desde el
+                <button
+                  type="button"
+                  onClick={() => setCurrentUrlModalOpen(true)}
+                  className="ml-1 inline-flex items-center font-semibold text-blue-600 underline decoration-2 underline-offset-2 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                enlace
+                </button>
+                <span> proporcionado.</span>
               </p>
-              <div className="mt-3 max-w-sm">
-                <Input
-                  aria-label="Enlace webcal del calendario"
-                  icon={Link2}
-                  type="url"
-                  value={webcalUrl || (loadingSource ? "" : maskCalendarUrl(storedUrl))}
-                  onChange={(event) => setWebcalUrl(event.target.value)}
-                  onFocus={() => {
-                    // El enlace guardado se muestra enmascarado; al enfocar se
-                    // limpia para pegar uno nuevo sin exponer el token.
-                    if (!webcalUrl) setWebcalUrl("");
-                  }}
-                  placeholder={
-                    loadingSource
-                      ? "Cargando enlace guardado…"
-                      : storedUrl
-                        ? "Pega el nuevo enlace para sustituirlo"
-                        : "webcal://…"
-                  }
-                  disabled={loadingSource || syncing}
-                />
-              </div>
             </div>
             <Button
-              onClick={reimportSchedule}
-              disabled={loadingSource || syncing || !(webcalUrl.trim() || storedUrl)}
+              onClick={() => setReimportModalOpen(true)}
+              disabled={loadingSource || syncing}
             >
               <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
               {syncing ? "Reimportando…" : "Reimportar"}
@@ -271,6 +289,83 @@ export function ScheduleSettings({
           </div>
         )}
       </section>
+      {reimportModalOpen && (
+        <>
+          <button
+            onClick={closeReimportModal}
+            className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]"
+            aria-label="Cerrar diálogo de reimportación"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-x-5 top-1/2 z-50 mx-auto w-full max-w-md -translate-y-1/2 rounded-[22px] border border-black/[.08] bg-white p-6 shadow-2xl dark:border-white/[.08] dark:bg-[#181B20]"
+          >
+            {!reimportDecision ? (
+              <>
+                <h2 className="text-xl font-semibold">
+                  ¿Quieres pegar un nuevo enlace?
+                </h2>
+                <div className="mt-6 flex justify-end gap-2">
+                  <Button variant="ghost" onClick={handleReimportCurrent}>
+                    No, reimportar actual
+                  </Button>
+                  <Button onClick={() => setReimportDecision("new")}>Sí</Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold">
+                  Pega el nuevo enlace
+                </h2>
+                <div className="mt-4">
+                  <Input
+                    aria-label="Nuevo enlace webcal"
+                    icon={Link2}
+                    type="url"
+                    value={newWebcalUrl}
+                    onChange={(event) => setNewWebcalUrl(event.target.value)}
+                    placeholder="webcal://…"
+                    disabled={syncing}
+                  />
+                </div>
+                <div className="mt-6 flex justify-end gap-2">
+                  <Button variant="ghost" onClick={closeReimportModal}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleReimportNew} disabled={syncing || !newWebcalUrl.trim()}>
+                    Importar eventos del nuevo enlace
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+      {currentUrlModalOpen && (
+        <>
+          <button
+            onClick={() => setCurrentUrlModalOpen(false)}
+            className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]"
+            aria-label="Cerrar enlace actual"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-x-5 top-1/2 z-50 mx-auto w-full max-w-lg -translate-y-1/2 rounded-[22px] border border-black/[.08] bg-white p-6 shadow-2xl dark:border-white/[.08] dark:bg-[#181B20]"
+          >
+            <h2 className="text-xl font-semibold">Enlace actual utilizado</h2>
+            <p className="mt-4 break-all rounded-[14px] border border-black/[.08] bg-slate-50 p-3 text-sm text-slate-700 dark:border-white/[.08] dark:bg-white/[.04] dark:text-slate-200">
+              {storedUrl || "Todavía no hay un enlace guardado."}
+            </p>
+            <div className="mt-6 flex justify-end">
+              <Button variant="ghost" onClick={() => setCurrentUrlModalOpen(false)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
       {deleteScheduleConfirmation && selectedSchedulePeriod && (
         <>
           <button

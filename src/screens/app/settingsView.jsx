@@ -57,7 +57,7 @@ export function SettingsView({
         {!editing ? (
           <div className="flex items-center gap-4 p-5">
             <div className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 font-bold text-white">
-              PL
+              {profile.username.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">@{profile.username}</p>

@@ -194,6 +194,7 @@ export default function App() {
             {active === "calendar" && (
               <CalendarView
                 theme={theme}
+                profile={profile}
                 schedule={{ events: schedule, period: schedulePeriod }}
                 showSlabTimes={showSlabTimes}
                 timeZone={displayTimeZone}

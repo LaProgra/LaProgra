@@ -96,6 +96,7 @@ function CalendarDay({
 export function CalendarView({
   theme,
   schedule,
+  profile,
   showSlabTimes = false,
   timeZone,
   onToggleSlabTimes,
@@ -105,6 +106,7 @@ export function CalendarView({
   const [view, setView] = useState("mes");
   const [selected, setSelected] = useState(null);
   const [profileMenu, setProfileMenu] = useState(false);
+  const userInitial = (profile?.username || "U").charAt(0).toUpperCase();
   const scheduleEvents = schedule.events || schedule;
   const now = new Date();
   const schedulePeriod =
@@ -211,7 +213,7 @@ export function CalendarView({
               aria-label="Abrir menú de usuario"
               aria-expanded={profileMenu}
             >
-              PL
+              {userInitial}
             </button>
             {profileMenu && (
               <div className="absolute right-0 top-11 z-30 min-w-44 overflow-hidden rounded-[14px] border border-black/[.08] bg-white p-1 shadow-lg dark:border-white/[.1] dark:bg-[#181B20]">
