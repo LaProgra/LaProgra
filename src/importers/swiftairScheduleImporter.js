@@ -266,7 +266,7 @@ function classifySwiftairEvent(summary) {
     };
   }
 
-  const flightMatch = summary.match(/^\s*((?=\S*[A-Z])(?=\S*\d)\S+)\s+([A-Z]{3})-([A-Z]{3})\b/i,);
+  const flightMatch = summary.match(/^\s*((?=\S*[A-Z])(?=\S*\d)\S+)\s+([A-Z]{3})-([A-Z]{3})\b/i);
   if (flightMatch) {
     const flightNumber = normalizeFlightNumber(flightMatch[1]);
     const origin = flightMatch[2].toUpperCase();
