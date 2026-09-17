@@ -357,6 +357,9 @@ function classifySwiftairEvent(summary: string) {
   const flightMatch = summary.match(/^\s*(\S+)\s+([A-Z]{3})-([A-Z]{3})\b/i);
   if (flightMatch) {
     const flightNumber = normalizeFlightNumber(flightMatch[1]);
+    if (!/[A-Z]/i.test(flightNumber) || !/\d/.test(flightNumber)) {
+      return { label: token || "ACT", desc: "", type: "duty" as const, flightNumber: "", situated: false };
+    }
     const origin = flightMatch[2].toUpperCase();
     const destination = flightMatch[3].toUpperCase();
     return {
