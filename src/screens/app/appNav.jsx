@@ -1,7 +1,7 @@
 import { CalendarDays, Settings, Users } from "lucide-react";
 import { LaPrograMark } from "../../components/shared";
 
-function TimeZoneSelector({
+export function TimeZoneSelector({
   timeZonePreference = "base",
   baseIata,
   onTimeZoneChange,

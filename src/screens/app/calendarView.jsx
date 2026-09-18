@@ -52,7 +52,7 @@ export function Slab({
   return (
     <button
       onClick={onClick}
-      className={`slab flex w-full flex-col justify-center overflow-hidden rounded-[8px] border px-1.5 py-1 text-center transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${showsTime ? "min-h-[36px]" : "min-h-[22px]"} ${theme === "dark" ? s.dark : s.light}`}
+      className={`slab flex w-full flex-col justify-center overflow-hidden rounded-[8px] border px-0.5 py-1 text-center transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${showsTime ? "min-h-[36px]" : "min-h-[22px]"} ${theme === "dark" ? s.dark : s.light}`}
     >
       <div className="slab__label whitespace-nowrap font-extrabold leading-tight tracking-wide">
         {event.label}

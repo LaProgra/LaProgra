@@ -230,6 +230,9 @@ export default function App() {
                 onDeleteSchedule={deleteSchedule}
                 onSyncSchedule={syncSchedule}
                 userId={session?.user?.id}
+                timeZonePreference={profile.displayTimeZone}
+                baseIata={profile.base}
+                onTimeZoneChange={updateDisplayTimeZone}
                 onDeleteAccount={deleteAccount}
                 onLogout={logout}
                 onBack={() => setActive("calendar")}

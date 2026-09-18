@@ -10,6 +10,7 @@ import {
 import { getAirportCity } from "../../importers";
 import { Button, Input } from "../../components/shared";
 import { ScheduleSettings } from "./scheduleSettings";
+import { TimeZoneSelector } from "./appNav";
 
 export function SettingsView({
   theme,
@@ -21,6 +22,9 @@ export function SettingsView({
   onDeleteSchedule,
   onSyncSchedule,
   userId,
+  timeZonePreference,
+  onTimeZoneChange,
+  baseIata,
   onDeleteAccount,
   onBack,
 }) {
@@ -142,6 +146,16 @@ export function SettingsView({
             ))}
           </div>
         </div>
+      </section>
+      <h2 className="mb-2 mt-7 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Uso horario
+      </h2>
+      <section className="overflow-hidden rounded-[20px] border border-black/[.06] bg-white p-3 dark:border-white/[.07] dark:bg-[#14171A]">
+        <TimeZoneSelector
+          timeZonePreference={timeZonePreference}
+          baseIata={baseIata}
+          onTimeZoneChange={onTimeZoneChange}
+        />
       </section>
       <ScheduleSettings
         airline={profile.airline}
