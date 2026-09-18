@@ -1,4 +1,4 @@
-import { useEffect,useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   HelpCircle,
   Link2,
+  TriangleAlert,
   LockKeyhole,
   Mail,
   MapPin,
@@ -16,6 +17,7 @@ import {
   Plane,
   Sun,
   UserRound,
+  X,
 } from "lucide-react";
 import { getAirportCity, importSchedule } from "../importers";
 import { Button, Input, LaPrograMark } from "../components/shared";
@@ -125,9 +127,7 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
       }
 
       if (newPassword.length < 8) {
-        setAuthError(
-          "La nueva contraseña debe tener al menos 8 caracteres.",
-        );
+        setAuthError("La nueva contraseña debe tener al menos 8 caracteres.");
         return;
       }
 
@@ -200,9 +200,7 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
     }
 
     if (data.user && data.user.identities?.length === 0) {
-      setAuthError(
-        "Ya existe una cuenta con ese correo. Inicia sesión.",
-      );
+      setAuthError("Ya existe una cuenta con ese correo. Inicia sesión.");
       return;
     }
 
@@ -307,17 +305,11 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
 
         <button
           type="button"
-          onClick={() =>
-            setTheme(theme === "dark" ? "light" : "dark")
-          }
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="grid h-11 w-11 place-items-center rounded-full text-slate-600 hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-white/10"
           aria-label="Cambiar tema"
         >
-          {theme === "dark" ? (
-            <Sun size={19} />
-          ) : (
-            <Moon size={19} />
-          )}
+          {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
         </button>
       </header>
 
@@ -333,8 +325,8 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
           </h1>
 
           <p className="mt-5 max-w-md text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-            Importa tu programación, entiende cada actividad de un
-            vistazo y encuentra coincidencias sin complicaciones.
+            Importa tu programación, entiende cada actividad de un vistazo y
+            encuentra coincidencias sin complicaciones.
           </p>
 
           <div
@@ -409,88 +401,74 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
                     setEmail(event.target.value);
                     setAuthError("");
                   }}
-                  error={
-                    touched && !email.trim()
-                      ? "Introduce tu correo"
-                      : ""
-                  }
+                  error={touched && !email.trim() ? "Introduce tu correo" : ""}
                 />
               )}
 
-              {mode !== "recover" &&
-                mode !== "updatePassword" && (
+              {mode !== "recover" && mode !== "updatePassword" && (
+                <Input
+                  label="Contraseña"
+                  icon={LockKeyhole}
+                  type="password"
+                  autoComplete={
+                    mode === "signIn" ? "current-password" : "new-password"
+                  }
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setAuthError("");
+                  }}
+                  error={touched && !password ? "Introduce tu contraseña" : ""}
+                />
+              )}
+
+              {mode === "updatePassword" && !passwordUpdated && (
+                <>
                   <Input
-                    label="Contraseña"
+                    label="Nueva contraseña"
                     icon={LockKeyhole}
                     type="password"
-                    autoComplete={
-                      mode === "signIn"
-                        ? "current-password"
-                        : "new-password"
-                    }
-                    placeholder="••••••••"
-                    value={password}
+                    autoComplete="new-password"
+                    placeholder="Mínimo 8 caracteres"
+                    value={newPassword}
                     onChange={(event) => {
-                      setPassword(event.target.value);
+                      setNewPassword(event.target.value);
                       setAuthError("");
                     }}
                     error={
-                      touched && !password
-                        ? "Introduce tu contraseña"
-                        : ""
+                      touched && !newPassword
+                        ? "Introduce la nueva contraseña"
+                        : touched && newPassword && newPassword.length < 8
+                          ? "Debe tener al menos 8 caracteres"
+                          : ""
                     }
                   />
-                )}
 
-              {mode === "updatePassword" &&
-                !passwordUpdated && (
-                  <>
-                    <Input
-                      label="Nueva contraseña"
-                      icon={LockKeyhole}
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="Mínimo 8 caracteres"
-                      value={newPassword}
-                      onChange={(event) => {
-                        setNewPassword(event.target.value);
-                        setAuthError("");
-                      }}
-                      error={
-                        touched && !newPassword
-                          ? "Introduce la nueva contraseña"
-                          : touched &&
-                              newPassword &&
-                              newPassword.length < 8
-                            ? "Debe tener al menos 8 caracteres"
-                            : ""
-                      }
-                    />
-
-                    <Input
-                      label="Confirmar nueva contraseña"
-                      icon={LockKeyhole}
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="Repite la nueva contraseña"
-                      value={confirmPassword}
-                      onChange={(event) => {
-                        setConfirmPassword(event.target.value);
-                        setAuthError("");
-                      }}
-                      error={
-                        touched && !confirmPassword
-                          ? "Confirma la nueva contraseña"
-                          : touched &&
-                              newPassword &&
-                              confirmPassword &&
-                              newPassword !== confirmPassword
-                            ? "Las contraseñas no coinciden"
-                            : ""
-                      }
-                    />
-                  </>
-                )}
+                  <Input
+                    label="Confirmar nueva contraseña"
+                    icon={LockKeyhole}
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="Repite la nueva contraseña"
+                    value={confirmPassword}
+                    onChange={(event) => {
+                      setConfirmPassword(event.target.value);
+                      setAuthError("");
+                    }}
+                    error={
+                      touched && !confirmPassword
+                        ? "Confirma la nueva contraseña"
+                        : touched &&
+                            newPassword &&
+                            confirmPassword &&
+                            newPassword !== confirmPassword
+                          ? "Las contraseñas no coinciden"
+                          : ""
+                    }
+                  />
+                </>
+              )}
 
               {mode === "signIn" && (
                 <div className="flex justify-end">
@@ -520,8 +498,7 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
                       setLoading(true);
                       setAuthError("");
 
-                      const { error } =
-                        await supabase.auth.signOut();
+                      const { error } = await supabase.auth.signOut();
 
                       setLoading(false);
 
@@ -538,9 +515,7 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
                     disabled={loading}
                     className="mt-3 font-semibold text-[#176BFF] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {loading
-                      ? "Cerrando sesión…"
-                      : "Ir a iniciar sesión"}
+                    {loading ? "Cerrando sesión…" : "Ir a iniciar sesión"}
                   </button>
                 </div>
               )}
@@ -555,11 +530,7 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
               )}
 
               {!passwordUpdated && (
-                <Button
-                  onClick={submit}
-                  disabled={loading}
-                  className="w-full"
-                >
+                <Button onClick={submit} disabled={loading} className="w-full">
                   {loading ? (
                     <>
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -587,32 +558,28 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
               )}
             </div>
 
-            {mode !== "recover" &&
-              mode !== "updatePassword" && (
-                <>
-                  <div className="my-5 flex items-center gap-3">
-                    <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
+            {mode !== "recover" && mode !== "updatePassword" && (
+              <>
+                <div className="my-5 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
 
-                    <span className="text-xs text-slate-400">
-                      o
-                    </span>
+                  <span className="text-xs text-slate-400">o</span>
 
-                    <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
-                  </div>
+                  <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
+                </div>
 
-                  <Button
-                    variant="secondary"
-                    onClick={continueWithGoogle}
-                    className="w-full"
-                  >
-                    <span className="grid h-5 w-5 place-items-center rounded-full bg-white text-[13px] font-bold text-blue-600 shadow-sm">
-                      G
-                    </span>
-
-                    Continuar con Google
-                  </Button>
-                </>
-              )}
+                <Button
+                  variant="secondary"
+                  onClick={continueWithGoogle}
+                  className="w-full"
+                >
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-white text-[13px] font-bold text-blue-600 shadow-sm">
+                    G
+                  </span>
+                  Continuar con Google
+                </Button>
+              </>
+            )}
 
             {mode !== "updatePassword" && (
               <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
@@ -630,11 +597,7 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
                       return;
                     }
 
-                    changeMode(
-                      mode === "signIn"
-                        ? "signUp"
-                        : "signIn",
-                    );
+                    changeMode(mode === "signIn" ? "signUp" : "signIn");
                   }}
                   className="font-semibold text-[#176BFF] hover:underline"
                 >
@@ -649,15 +612,14 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
           </div>
 
           <p className="mt-5 text-center text-xs leading-relaxed text-slate-400">
-            Al continuar, aceptas las condiciones de uso y la política
-            de privacidad.
+            Al continuar, aceptas las condiciones de uso y la política de
+            privacidad.
           </p>
         </motion.section>
       </main>
     </div>
   );
 }
-
 
 function Stepper({ step }) {
   return (
@@ -672,6 +634,163 @@ function Stepper({ step }) {
   );
 }
 
+function HelpStep({ number, title, children }) {
+  return (
+    <li className="flex gap-3">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-50 text-xs font-bold text-[#176BFF] dark:bg-blue-950/60 dark:text-blue-300">
+        {number}
+      </span>
+      <div className="pt-0.5">
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          {title}
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+          {children}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+function IberiaImportHelp() {
+  return (
+    <>
+      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        Descarga tu programación desde ibNet y selecciona el archivo CSV
+        obtenido.
+      </p>
+      <ol className="mt-5 space-y-4">
+        <HelpStep number="1" title="Accede a ibNet">
+          Entra con tus credenciales habituales.
+        </HelpStep>
+        <HelpStep number="2" title="Abre Programación">
+          Ve a <strong>Programación</strong> y selecciona la opción{" "}
+          <strong>Outlook</strong>.
+        </HelpStep>
+        <HelpStep number="3" title="Descarga el archivo">
+          Guarda el archivo de programación en formato CSV.
+        </HelpStep>
+        <HelpStep number="4" title="Impórtalo en LaProgra">
+          Cierra esta ventana y pulsa “Selecciona o arrastra tu CSV”.
+        </HelpStep>
+      </ol>
+      <div className="mt-5 flex gap-3 rounded-[14px] bg-slate-100 p-4 dark:bg-white/[.05]">
+        <LockKeyhole size={18} className="mt-0.5 shrink-0 text-slate-400" />
+        <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          La columna <strong>Description</strong> se descarta durante la
+          importación y no se conserva.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function SwiftairImportHelp() {
+  return (
+    <>
+      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        Necesitas un dispositivo Apple para poder importar tu calendario de
+        Swiftair.
+      </p>
+      <ol className="mt-5 space-y-4">
+        <HelpStep number="1" title="Crea un calendario en Calendar">
+          Abre la app{" "}
+          <a
+            href="https://www.icloud.com/calendar/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: "inherit",
+              textDecoration: "underline",
+              cursor: "pointer",
+            }}
+          >
+            Calendar
+          </a>{" "}
+          de Apple y crea un calendario. Ejemplo: “Swiftair”.
+        </HelpStep>
+        <HelpStep number="2" title="Exporta tus eventos">
+          <p>
+            Abre <strong>eCrew</strong> en tu dispositivo Apple y ve a{" "}
+            <strong>Settings</strong>.
+          </p>
+
+          <p className="mt-2">
+            En <strong>Export to</strong>, selecciona el calendario que creaste
+            previamente.
+          </p>
+
+          <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3 dark:border-blue-900/50 dark:bg-blue-950/30">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+              Importante
+            </p>
+
+            <div className="mt-2 space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-600 dark:text-slate-300">
+                  AutoSync
+                </span>
+                <span className="rounded-md bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-950/50 dark:text-green-300">
+                  ON
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-600 dark:text-slate-300">
+                  Combined flights
+                </span>
+                <span className="rounded-md bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                  OFF
+                </span>
+              </div>
+            </div>
+          </div>
+        </HelpStep>
+        <HelpStep number="3" title="Copia el enlace">
+          En{" "}
+          <a
+            href="https://www.icloud.com/calendar/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: "inherit",
+              textDecoration: "underline",
+              cursor: "pointer",
+            }}
+          >
+            Calendar
+          </a>{" "}
+          selecciona el calendario que creaste previamente y hazlo público.
+          Copia el enlace webcal proporcionado.
+        </HelpStep>
+        <HelpStep number="4" title="Pega aquí el enlace">
+          Cierra esta ventana y luego pega el enlace. Después pulsa “Importa tu
+          enlace webcal” para cargar los eventos.
+        </HelpStep>
+      </ol>
+      <div className="mt-5 flex gap-3 rounded-[14px] bg-slate-100 p-4 dark:bg-white/[.05]">
+        <TriangleAlert size={18} className="mt-0.5 shrink-0 text-slate-400" />
+        <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          Si el proceso se corrompe crea nuevamente otro calendario en{" "}
+          <a
+            href="https://www.icloud.com/calendar/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: "inherit",
+              textDecoration: "underline",
+              cursor: "pointer",
+            }}
+          >
+            Calendar
+          </a>{" "}
+          con un nombre distinto y repite los pasos anteriores.
+        </p>
+      </div>
+    </>
+  );
+}
+
 export function Onboarding({
   userId,
   onFinish,
@@ -680,9 +799,10 @@ export function Onboarding({
   setSchedulePeriod,
 }) {
   const [step, setStep] = useState(1);
-  const [airline, setAirline] = useState("Iberia");
-  const [base, setBase] = useState("MAD");
+  const [airline, setAirline] = useState("");
+  const [base, setBase] = useState("");
   const [username, setUsername] = useState("");
+  const [onboardingTouched, setOnboardingTouched] = useState(false);
   const [fileState, setFileState] = useState("idle");
   const [importError, setImportError] = useState("");
   const [importedCount, setImportedCount] = useState(0);
@@ -690,7 +810,28 @@ export function Onboarding({
   const [parsedSchedule, setParsedSchedule] = useState(null);
   const [scheduleSavedByServer, setScheduleSavedByServer] = useState(false);
   const [webcalUrl, setWebcalUrl] = useState("");
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
+
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (!helpModalOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setHelpModalOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [helpModalOpen]);
+
+  useEffect(() => {
+    if (step !== 2) {
+      setHelpModalOpen(false);
+    }
+  }, [step]);
   const showImportedSchedule = (parsed, savedByServer = false) => {
     const count = Object.values(parsed.events).flat().length;
     if (!count) {
@@ -736,12 +877,26 @@ export function Onboarding({
     } catch (error) {
       console.error("No se pudo importar la programación de Swiftair", error);
       setImportError(
-        error instanceof Error ? error.message : "No se ha podido leer el calendario.",
+        error instanceof Error
+          ? error.message
+          : "No se ha podido leer el calendario.",
       );
       setFileState("idle");
     }
   };
   const next = async () => {
+    if (step === 1) {
+      setOnboardingTouched(true);
+
+      const isAirlineValid = airline.trim() !== "";
+      const isBaseValid = base.trim().length === 3;
+      const isUsernameValid = username.trim() !== "";
+
+      if (!isAirlineValid || !isBaseValid || !isUsernameValid) {
+        return;
+      }
+    }
+
     if (step < 3) {
       setStep(step + 1);
       return;
@@ -750,7 +905,7 @@ export function Onboarding({
       airline,
       base,
       baseCity: getAirportCity(base),
-      username: username || "pedro",
+      username: username.trim(),
       displayTimeZone: "base",
     };
     setProfile(profileData);
@@ -766,10 +921,7 @@ export function Onboarding({
     <div className="min-h-screen bg-[#F5F6F8] text-slate-950 dark:bg-[#090B10] dark:text-white">
       <header className="mx-auto flex max-w-4xl items-center justify-between px-5 py-5 md:px-8">
         <LaPrograMark />
-        <button className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
-          <HelpCircle size={17} />
-          <span className="hidden sm:inline">Ayuda</span>
-        </button>
+        <span />
       </header>
       <main className="mx-auto flex max-w-2xl flex-col px-5 pb-12 pt-6 md:px-8 md:pt-14">
         <Stepper step={step} />
@@ -815,8 +967,11 @@ export function Onboarding({
                       }}
                       className="min-h-12 w-full appearance-none rounded-[14px] border border-black/10 bg-white pl-11 pr-10 text-[15px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-white/10 dark:bg-white/[.045] dark:focus:ring-blue-950"
                     >
-                      <option>Iberia</option>
-                      <option value="Swiftair">Swiftair · WT</option>
+                      <option value="" disabled>
+                        Selecciona una aerolínea
+                      </option>
+                      <option value="Iberia">Iberia</option>
+                      <option value="Swiftair">Swiftair</option>
                       <option disabled>Más aerolíneas próximamente</option>
                     </select>
                   </div>
@@ -829,8 +984,13 @@ export function Onboarding({
                   onChange={(e) =>
                     setBase(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))
                   }
-                  placeholder="MAD"
+                  placeholder="ej. MAD"
                   hint="Código IATA de 3 letras"
+                  error={
+                    onboardingTouched && base.trim().length !== 3
+                      ? "Introduce un código IATA de 3 letras"
+                      : ""
+                  }
                 />
                 <Input
                   label="Nombre de usuario"
@@ -839,8 +999,13 @@ export function Onboarding({
                   onChange={(e) =>
                     setUsername(e.target.value.replace(/\s/g, "").toLowerCase())
                   }
-                  placeholder="pedro"
+                  placeholder="ej. pedro"
                   hint="Será visible para tus amistades"
+                  error={
+                    onboardingTouched && !username.trim()
+                      ? "Introduce un nombre de usuario"
+                      : ""
+                  }
                 />
               </div>
             </motion.section>
@@ -856,13 +1021,32 @@ export function Onboarding({
               <p className="text-sm font-semibold text-[#176BFF]">
                 Primera importación
               </p>
-              <h1 className="mt-2 text-[34px] font-semibold leading-tight tracking-[-0.045em] md:text-[42px]">
-                Trae tu programación.
-              </h1>
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="mt-2 text-[34px] font-semibold leading-tight tracking-[-0.045em] md:text-[42px]">
+                  Trae tu programación.
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => setHelpModalOpen(true)}
+                  className="mt-1 flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition hover:bg-black/5 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+                  aria-haspopup="dialog"
+                  aria-expanded={helpModalOpen}
+                  aria-controls="onboarding-import-help"
+                >
+                  <HelpCircle size={17} />
+                  <span className="hidden sm:inline">Ayuda</span>
+                </button>
+              </div>
               <p className="mt-3 max-w-lg text-slate-600 dark:text-slate-400">
-                {airline === "Swiftair"
-                  ? "Pega el enlace webcal de Swiftair. LaProgra interpretará los eventos de tu programación."
-                  : "Selecciona el archivo CSV recibido de Iberia. LaProgra interpretará las actividades reconocidas."}
+                {airline === "Swiftair" ? (
+                  "Pega el enlace webcal de Swiftair. LaProgra interpretará los eventos de tu programación."
+                ) : (
+                  <>
+                    Selecciona el archivo CSV que hay en{" "}
+                    <strong>ibNet - Programación - Outlook</strong>. LaProgra
+                    interpretará los eventos de tu programación.
+                  </>
+                )}
               </p>
               {airline === "Swiftair" && (
                 <div className="mt-6">
@@ -986,18 +1170,14 @@ export function Onboarding({
                 Todo listo.
               </h1>
               <p className="mt-3 max-w-lg text-slate-600 dark:text-slate-400">
-                Tu calendario ya está preparado. Las horas se muestran en el
-                huso horario de tu base.
+                Tu calendario ya está preparado. Por defecto, las horas se
+                muestran en el huso horario de tu base.
               </p>
               <div className="mt-8 overflow-hidden rounded-[22px] border border-black/[.06] bg-white dark:border-white/[.07] dark:bg-[#14171A]">
                 {[
                   [Plane, "Aerolínea", airline],
-                  [
-                    MapPin,
-                    "Base",
-                    `${getAirportCity(base) || base || "MAD"} (${base || "MAD"})`,
-                  ],
-                  [UserRound, "Usuario", `@${username || "pedro"}`],
+                  [MapPin, "Base", `${getAirportCity(base) || base} (${base})`],
+                  [UserRound, "Usuario", `@${username}`],
                   [
                     FileSpreadsheet,
                     "Importación",
@@ -1033,8 +1213,13 @@ export function Onboarding({
           <Button
             onClick={next}
             disabled={
-              (step === 1 && (!base || base.length !== 3)) ||
-              (step === 2 && fileState === "loading")
+              (step === 1 &&
+                (!airline.trim() ||
+                  base.trim().length !== 3 ||
+                  !username.trim())) ||
+              (step === 2 &&
+                (fileState === "loading" ||
+                  (airline === "Swiftair" && !webcalUrl.trim())))
             }
           >
             {step === 3 ? "Ver mi calendario" : "Continuar"}
@@ -1042,6 +1227,73 @@ export function Onboarding({
           </Button>
         </div>
       </main>
+
+      {helpModalOpen && (
+        <>
+          <button
+            type="button"
+            onClick={() => setHelpModalOpen(false)}
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+            aria-label="Cerrar ayuda de importación"
+          />
+          <div
+            id="onboarding-import-help"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="onboarding-import-help-title"
+            aria-describedby="onboarding-import-help-description"
+            className="fixed inset-x-5 top-1/2 z-50 mx-auto flex max-h-[90vh] w-auto max-w-lg -translate-y-1/2 flex-col overflow-hidden rounded-[22px] border border-black/[.08] bg-white shadow-2xl dark:border-white/[.08] dark:bg-[#181B20]"
+          >
+            {/* Header */}
+            <div className="flex shrink-0 items-start justify-between gap-4 p-6 pb-0">
+              <div>
+                <p className="text-sm font-semibold text-[#176BFF]">
+                  Ayuda de importación
+                </p>
+
+                <h2
+                  id="onboarding-import-help-title"
+                  className="mt-1 text-xl font-semibold"
+                >
+                  {airline === "Swiftair"
+                    ? "Cómo obtener tu enlace webcal"
+                    : "Cómo descargar tu programación"}
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setHelpModalOpen(false)}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/10 dark:hover:text-white"
+                aria-label="Cerrar ayuda"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Contenido con scroll */}
+            <div
+              id="onboarding-import-help-description"
+              className="min-h-0 overflow-y-auto px-6 pt-5"
+            >
+              {airline === "Swiftair" ? (
+                <SwiftairImportHelp />
+              ) : (
+                <IberiaImportHelp />
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="shrink-0 p-6 pt-4">
+              <div className="flex justify-end">
+                <Button onClick={() => setHelpModalOpen(false)}>
+                  Entendido
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
