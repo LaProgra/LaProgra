@@ -1057,7 +1057,7 @@ export function Onboarding({
                     value={webcalUrl}
                     onChange={(event) => setWebcalUrl(event.target.value)}
                     placeholder="webcal://…"
-                    hint="El enlace debe ser accesible sin iniciar sesión."
+                    hint="Podrás cambiar el enlace en la configuración de LaProgra."
                   />
                 </div>
               )}
@@ -1247,10 +1247,6 @@ export function Onboarding({
             {/* Header */}
             <div className="flex shrink-0 items-start justify-between gap-4 p-6 pb-0">
               <div>
-                <p className="text-sm font-semibold text-[#176BFF]">
-                  Ayuda de importación
-                </p>
-
                 <h2
                   id="onboarding-import-help-title"
                   className="mt-1 text-xl font-semibold"
