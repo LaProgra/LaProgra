@@ -72,7 +72,7 @@ export function Slab({
 }
 
 function CalendarDay({
-  day,
+  date,
   index,
   isToday,
   isLastRow,
@@ -82,14 +82,17 @@ function CalendarDay({
   timeZone,
   onSelect,
 }) {
+  const day = date?.day;
+  const isOutsideMonth =
+    date && (date.month !== date.visibleMonth || date.year !== date.visibleYear);
   return (
     <div
       className={`relative min-h-[82px] border-b border-r border-black/[.055] p-1 dark:border-white/[.06] sm:min-h-[116px] sm:p-1.5 lg:min-h-[132px] ${index % 7 === 6 ? "border-r-0" : ""} ${isLastRow ? "border-b-0" : ""} ${isToday ? "bg-blue-50/40 dark:bg-blue-950/10" : ""}`}
     >
-      {day && (
+      {date && (
         <>
           <div
-            className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold sm:text-xs ${isToday ? "bg-[#176BFF] text-white" : "text-slate-600 dark:text-slate-300"}`}
+            className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold sm:text-xs ${isToday ? "bg-[#176BFF] text-white" : isOutsideMonth ? "text-slate-400 dark:text-slate-600" : "text-slate-600 dark:text-slate-300"}`}
           >
             {day}
           </div>
@@ -102,7 +105,7 @@ function CalendarDay({
                 compact
                 showTime={showSlabTimes}
                 timeZone={timeZone}
-                onClick={() => onSelect({ ...event, day })}
+                onClick={() => onSelect({ ...event, day, month: date.month, year: date.year })}
               />
             ))}
           </div>
@@ -154,13 +157,21 @@ export function CalendarView({
     visiblePeriod.month,
     0,
   ).getDate();
-  const monthDays = Array.from(
-    { length: Math.ceil((firstWeekday + daysInMonth) / 7) * 7 },
-    (_, index) => {
-      const day = index - firstWeekday + 1;
-      return day > 0 && day <= daysInMonth ? day : null;
-    },
-  );
+  const gridLength = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+  const monthDays = Array.from({ length: gridLength }, (_, index) => {
+    const gridDate = new Date(
+      visiblePeriod.year,
+      visiblePeriod.month - 1,
+      index - firstWeekday + 1,
+    );
+    return {
+      day: gridDate.getDate(),
+      month: gridDate.getMonth() + 1,
+      year: gridDate.getFullYear(),
+      visibleMonth: visiblePeriod.month,
+      visibleYear: visiblePeriod.year,
+    };
+  });
   const weekdays = ["L", "M", "X", "J", "V", "S", "D"];
   const fullWeekdays = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sáb", "Dom"];
   const today = getDateInTimeZone(timeZone);
@@ -185,14 +196,9 @@ export function CalendarView({
           year: event.year || schedulePeriod.year,
         };
         const eventDate = getEventDisplayDate(datedEvent, timeZone);
-        if (
-          eventDate.month !== visiblePeriod.month ||
-          eventDate.year !== visiblePeriod.year
-        ) {
-          return;
-        }
-        if (!eventsByDay[eventDate.day]) eventsByDay[eventDate.day] = [];
-        eventsByDay[eventDate.day].push(datedEvent);
+        const eventKey = `${eventDate.year}-${eventDate.month}-${eventDate.day}`;
+        if (!eventsByDay[eventKey]) eventsByDay[eventKey] = [];
+        eventsByDay[eventKey].push(datedEvent);
       });
       return eventsByDay;
     },
@@ -317,15 +323,15 @@ export function CalendarView({
             {monthDays.map((day, index) => (
               <CalendarDay
                 key={index}
-                day={day}
+                date={day}
                 index={index}
                 isToday={
-                  day === today.day &&
-                  visiblePeriod.month === today.month &&
-                  visiblePeriod.year === today.year
+                  day.day === today.day &&
+                  day.month === today.month &&
+                  day.year === today.year
                 }
                 isLastRow={index >= monthDays.length - 7}
-                events={eventsByVisibleDay[day] || []}
+                events={eventsByVisibleDay[`${day.year}-${day.month}-${day.day}`] || []}
                 theme={theme}
                 showSlabTimes={showSlabTimes}
                 timeZone={timeZone}
@@ -340,10 +346,15 @@ export function CalendarView({
           animate={{ opacity: 1, y: 0 }}
           className="mt-4 space-y-2"
         >
-          {Object.entries(eventsByVisibleDay).map(([day, visibleEvents]) => {
+          {Object.entries(eventsByVisibleDay)
+            .filter(([dateKey]) =>
+              dateKey.startsWith(`${visiblePeriod.year}-${visiblePeriod.month}-`),
+            )
+            .map(([dateKey, visibleEvents]) => {
+            const day = Number(dateKey.split("-")[2]);
             return (
               <div
-                key={day}
+                key={dateKey}
                 className="flex gap-3 rounded-[16px] border border-black/[.06] bg-white p-3 dark:border-white/[.07] dark:bg-[#14171A]"
               >
                 <div className="w-10 shrink-0 text-center">
