@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect,useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -29,54 +29,251 @@ import {
 export function Login({ onContinue, theme, setTheme }) {
   const [mode, setMode] = useState("signIn");
   const [loading, setLoading] = useState(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [touched, setTouched] = useState(false);
   const [authError, setAuthError] = useState("");
+
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [recoverySent, setRecoverySent] = useState(false);
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
+
+  /*
+   * Detecta cuándo el usuario vuelve desde el enlace
+   * de recuperación enviado por Supabase.
+   */
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("updatePassword");
+        setRecoverySent(false);
+        setPasswordUpdated(false);
+        setTouched(false);
+        setAuthError("");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const changeMode = (newMode) => {
+    setMode(newMode);
+    setTouched(false);
+    setAuthError("");
+    setLoading(false);
+    setPasswordUpdated(false);
+
+    if (newMode === "recover") {
+      setPassword("");
+    }
+
+    if (newMode !== "updatePassword") {
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  };
+
   const submit = async () => {
     setTouched(true);
     setAuthError("");
-    if (!email || !password) return;
-    setLoading(true);
-    if (mode === "signIn") {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+
+    /*
+     * SOLICITAR RECUPERACIÓN DE CONTRASEÑA
+     */
+    if (mode === "recover") {
+      const normalizedEmail = email.trim();
+
+      if (!normalizedEmail) {
+        return;
+      }
+
+      setLoading(true);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        normalizedEmail,
+        {
+          redirectTo: window.location.origin,
+        },
+      );
+
       setLoading(false);
+
       if (error) {
         setAuthError(error.message);
         return;
       }
+
+      setRecoverySent(true);
+      return;
+    }
+
+    /*
+     * GUARDAR LA NUEVA CONTRASEÑA
+     */
+    if (mode === "updatePassword") {
+      if (!newPassword || !confirmPassword) {
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        setAuthError(
+          "La nueva contraseña debe tener al menos 8 caracteres.",
+        );
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setAuthError("Las contraseñas no coinciden.");
+        return;
+      }
+
+      setLoading(true);
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      setLoading(false);
+
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+
+      setPasswordUpdated(true);
+      setTouched(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      return;
+    }
+
+    /*
+     * INICIO DE SESIÓN Y REGISTRO
+     */
+    const normalizedEmail = email.trim();
+
+    if (!normalizedEmail || !password) {
+      return;
+    }
+
+    setLoading(true);
+
+    if (mode === "signIn") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+
+      setLoading(false);
+
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+
       onContinue();
       return;
     }
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
     });
+
     setLoading(false);
+
     if (error) {
       setAuthError(error.message);
       return;
     }
-    // email inválido/duplicado: Supabase responde sin error pero sin identidades nuevas
+
     if (data.user && data.user.identities?.length === 0) {
-      setAuthError("Ya existe una cuenta con ese correo. Inicia sesión.");
+      setAuthError(
+        "Ya existe una cuenta con ese correo. Inicia sesión.",
+      );
       return;
     }
-    // sin confirmación de correo aún no hay sesión: hay que esperar al enlace de verificación
+
     if (!data.session) {
       setConfirmationSent(true);
       return;
     }
+
     onContinue();
   };
-  const continueWithGoogle = () => {
-    supabase.auth.signInWithOAuth({ provider: "google" });
+
+  const continueWithGoogle = async () => {
+    setAuthError("");
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      setAuthError(error.message);
+    }
   };
+
+  /*
+   * PANTALLA DESPUÉS DE ENVIAR EL CORREO
+   */
+  if (recoverySent) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F5F6F8] px-5 text-slate-950 dark:bg-[#090B10] dark:text-white">
+        <div className="mx-auto w-full max-w-[430px] rounded-[26px] border border-black/[.06] bg-white/90 p-7 text-center shadow-[0_18px_60px_rgba(20,23,28,.08)] backdrop-blur-xl dark:border-white/[.08] dark:bg-[#14171A]/90">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-blue-50 text-[#176BFF] dark:bg-blue-950/60">
+            <Mail size={26} />
+          </div>
+
+          <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em]">
+            Revisa tu correo
+          </h2>
+
+          <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+            Si existe una cuenta asociada a{" "}
+            <strong className="text-slate-700 dark:text-slate-200">
+              {email.trim()}
+            </strong>
+            , recibirás un enlace para cambiar tu contraseña.
+          </p>
+
+          <p className="mt-3 text-xs leading-relaxed text-slate-400">
+            Revisa también la carpeta de correo no deseado.
+          </p>
+
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setRecoverySent(false);
+              changeMode("signIn");
+            }}
+            className="mt-6 w-full"
+          >
+            Volver a iniciar sesión
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * PANTALLA DESPUÉS DEL REGISTRO
+   */
   if (confirmationSent) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F5F6F8] px-5 text-slate-950 dark:bg-[#090B10] dark:text-white">
@@ -84,13 +281,15 @@ export function Login({ onContinue, theme, setTheme }) {
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-blue-50 text-[#176BFF] dark:bg-blue-950/60">
             <Mail size={26} />
           </div>
+
           <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em]">
             Confirma tu correo
           </h2>
+
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Hemos enviado un enlace de confirmación a{" "}
             <strong className="text-slate-700 dark:text-slate-200">
-              {email}
+              {email.trim()}
             </strong>
             . Ábrelo para activar tu cuenta y continuar.
           </p>
@@ -98,44 +297,65 @@ export function Login({ onContinue, theme, setTheme }) {
       </div>
     );
   }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#F5F6F8] text-slate-950 dark:bg-[#090B10] dark:text-white">
       <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-400/10 blur-3xl" />
+
       <header className="relative mx-auto flex max-w-6xl items-center justify-between px-5 py-5 md:px-8">
         <LaPrograMark />
+
         <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          type="button"
+          onClick={() =>
+            setTheme(theme === "dark" ? "light" : "dark")
+          }
           className="grid h-11 w-11 place-items-center rounded-full text-slate-600 hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-white/10"
           aria-label="Cambiar tema"
         >
-          {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
+          {theme === "dark" ? (
+            <Sun size={19} />
+          ) : (
+            <Moon size={19} />
+          )}
         </button>
       </header>
+
       <main className="relative mx-auto grid min-h-[calc(100vh-82px)] max-w-6xl items-center px-5 pb-10 md:grid-cols-2 md:gap-16 md:px-8">
         <section className="hidden md:block">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300">
             <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
             Tu programación, más clara
           </div>
+
           <h1 className="max-w-lg text-5xl font-semibold leading-[1.02] tracking-[-0.05em]">
             Tu calendario laboral y el de tu gente, en un solo lugar.
           </h1>
+
           <p className="mt-5 max-w-md text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-            Importa tu programación, entiende cada actividad de un vistazo y
-            encuentra coincidencias sin complicaciones.
+            Importa tu programación, entiende cada actividad de un
+            vistazo y encuentra coincidencias sin complicaciones.
           </p>
+
           <div
             className="mt-10 grid max-w-md grid-cols-7 gap-2 opacity-90"
             aria-hidden="true"
           >
-            {[...Array(21)].map((_, i) => (
+            {[...Array(21)].map((_, index) => (
               <div
-                key={i}
-                className={`h-12 rounded-xl ${i === 9 || i === 10 ? "bg-emerald-400/80" : i === 4 || i === 16 ? "bg-violet-400/75" : "bg-white shadow-sm dark:bg-white/10"}`}
+                key={index}
+                className={`h-12 rounded-xl ${
+                  index === 9 || index === 10
+                    ? "bg-emerald-400/80"
+                    : index === 4 || index === 16
+                      ? "bg-violet-400/75"
+                      : "bg-white shadow-sm dark:bg-white/10"
+                }`}
               />
             ))}
           </div>
         </section>
+
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -143,92 +363,301 @@ export function Login({ onContinue, theme, setTheme }) {
         >
           <div className="mb-8 md:hidden">
             <h1 className="text-[34px] font-semibold leading-tight tracking-[-0.045em]">
-              Bienvenido a<br />
+              Bienvenido a
+              <br />
               LaProgra.
             </h1>
+
             <p className="mt-3 text-slate-600 dark:text-slate-400">
               Tu programación, siempre a mano.
             </p>
           </div>
+
           <div className="rounded-[26px] border border-black/[.06] bg-white/90 p-5 shadow-[0_18px_60px_rgba(20,23,28,.08)] backdrop-blur-xl dark:border-white/[.08] dark:bg-[#14171A]/90 md:p-7">
             <h2 className="text-2xl font-semibold tracking-[-0.035em]">
-              {mode === "signIn" ? "Iniciar sesión" : "Crear cuenta"}
+              {mode === "recover"
+                ? "Recuperar contraseña"
+                : mode === "updatePassword"
+                  ? "Crear nueva contraseña"
+                  : mode === "signIn"
+                    ? "Iniciar sesión"
+                    : "Crear cuenta"}
             </h2>
+
             <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-              Accede para consultar tu calendario.
+              {mode === "recover"
+                ? "Introduce el correo utilizado en el registro."
+                : mode === "updatePassword"
+                  ? passwordUpdated
+                    ? "La nueva contraseña se ha guardado."
+                    : "Introduce y confirma tu nueva contraseña."
+                  : mode === "signIn"
+                    ? "Accede para consultar tu calendario."
+                    : "Introduce un correo y contraseña para tu cuenta."}
             </p>
+
             <div className="mt-6 space-y-4">
-              <Input
-                label="Correo electrónico"
-                icon={Mail}
-                type="email"
-                placeholder="tu@correo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                error={touched && !email ? "Introduce tu correo" : ""}
-              />
-              <Input
-                label="Contraseña"
-                icon={LockKeyhole}
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={touched && !password ? "Introduce tu contraseña" : ""}
-              />
-              <div className="flex justify-end">
-                <button className="text-sm font-semibold text-[#176BFF] hover:underline">
-                  ¿Has olvidado tu contraseña?
-                </button>
-              </div>
-              {authError && (
-                <p className="text-sm font-medium text-red-600">{authError}</p>
+              {mode !== "updatePassword" && (
+                <Input
+                  label="Correo electrónico"
+                  icon={Mail}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="tu@correo.com"
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setAuthError("");
+                  }}
+                  error={
+                    touched && !email.trim()
+                      ? "Introduce tu correo"
+                      : ""
+                  }
+                />
               )}
-              <Button onClick={submit} className="w-full">
-                {loading ? (
+
+              {mode !== "recover" &&
+                mode !== "updatePassword" && (
+                  <Input
+                    label="Contraseña"
+                    icon={LockKeyhole}
+                    type="password"
+                    autoComplete={
+                      mode === "signIn"
+                        ? "current-password"
+                        : "new-password"
+                    }
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      setAuthError("");
+                    }}
+                    error={
+                      touched && !password
+                        ? "Introduce tu contraseña"
+                        : ""
+                    }
+                  />
+                )}
+
+              {mode === "updatePassword" &&
+                !passwordUpdated && (
                   <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                    {mode === "signIn" ? "Accediendo…" : "Creando cuenta…"}
-                  </>
-                ) : (
-                  <>
-                    Continuar <ArrowRight size={17} />
+                    <Input
+                      label="Nueva contraseña"
+                      icon={LockKeyhole}
+                      type="password"
+                      autoComplete="new-password"
+                      placeholder="Mínimo 8 caracteres"
+                      value={newPassword}
+                      onChange={(event) => {
+                        setNewPassword(event.target.value);
+                        setAuthError("");
+                      }}
+                      error={
+                        touched && !newPassword
+                          ? "Introduce la nueva contraseña"
+                          : touched &&
+                              newPassword &&
+                              newPassword.length < 8
+                            ? "Debe tener al menos 8 caracteres"
+                            : ""
+                      }
+                    />
+
+                    <Input
+                      label="Confirmar nueva contraseña"
+                      icon={LockKeyhole}
+                      type="password"
+                      autoComplete="new-password"
+                      placeholder="Repite la nueva contraseña"
+                      value={confirmPassword}
+                      onChange={(event) => {
+                        setConfirmPassword(event.target.value);
+                        setAuthError("");
+                      }}
+                      error={
+                        touched && !confirmPassword
+                          ? "Confirma la nueva contraseña"
+                          : touched &&
+                              newPassword &&
+                              confirmPassword &&
+                              newPassword !== confirmPassword
+                            ? "Las contraseñas no coinciden"
+                            : ""
+                      }
+                    />
                   </>
                 )}
-              </Button>
+
+              {mode === "signIn" && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => changeMode("recover")}
+                    className="text-sm font-semibold text-[#176BFF] hover:underline"
+                  >
+                    ¿Has olvidado tu contraseña?
+                  </button>
+                </div>
+              )}
+
+              {passwordUpdated && (
+                <div className="rounded-[14px] bg-emerald-50 px-4 py-4 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                  <p className="font-semibold">
+                    Contraseña actualizada correctamente
+                  </p>
+
+                  <p className="mt-1">
+                    Ya puedes iniciar sesión con tu nueva contraseña.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setLoading(true);
+                      setAuthError("");
+
+                      const { error } =
+                        await supabase.auth.signOut();
+
+                      setLoading(false);
+
+                      if (error) {
+                        setAuthError(error.message);
+                        return;
+                      }
+
+                      setPasswordUpdated(false);
+                      setEmail("");
+                      setPassword("");
+                      changeMode("signIn");
+                    }}
+                    disabled={loading}
+                    className="mt-3 font-semibold text-[#176BFF] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loading
+                      ? "Cerrando sesión…"
+                      : "Ir a iniciar sesión"}
+                  </button>
+                </div>
+              )}
+
+              {authError && (
+                <p
+                  role="alert"
+                  className="rounded-[14px] bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300"
+                >
+                  {authError}
+                </p>
+              )}
+
+              {!passwordUpdated && (
+                <Button
+                  onClick={submit}
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+
+                      {mode === "recover"
+                        ? "Enviando…"
+                        : mode === "updatePassword"
+                          ? "Actualizando…"
+                          : mode === "signIn"
+                            ? "Accediendo…"
+                            : "Creando cuenta…"}
+                    </>
+                  ) : mode === "recover" ? (
+                    "Recuperar"
+                  ) : mode === "updatePassword" ? (
+                    "Guardar nueva contraseña"
+                  ) : mode === "signIn" ? (
+                    <>
+                      Continuar <ArrowRight size={17} />
+                    </>
+                  ) : (
+                    "Registrar"
+                  )}
+                </Button>
+              )}
             </div>
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
-              <span className="text-xs text-slate-400">o</span>
-              <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
-            </div>
-            <Button variant="secondary" onClick={continueWithGoogle} className="w-full">
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-white text-[13px] font-bold text-blue-600 shadow-sm">
-                G
-              </span>
-              Continuar con Google
-            </Button>
-            <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-              {mode === "signIn" ? "¿Aún no tienes cuenta? " : "¿Ya tienes cuenta? "}
-              <button
-                onClick={() =>
-                  setMode(mode === "signIn" ? "signUp" : "signIn")
-                }
-                className="font-semibold text-[#176BFF] hover:underline"
-              >
-                {mode === "signIn" ? "Crear cuenta" : "Iniciar sesión"}
-              </button>
-            </p>
+
+            {mode !== "recover" &&
+              mode !== "updatePassword" && (
+                <>
+                  <div className="my-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
+
+                    <span className="text-xs text-slate-400">
+                      o
+                    </span>
+
+                    <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    onClick={continueWithGoogle}
+                    className="w-full"
+                  >
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-white text-[13px] font-bold text-blue-600 shadow-sm">
+                      G
+                    </span>
+
+                    Continuar con Google
+                  </Button>
+                </>
+              )}
+
+            {mode !== "updatePassword" && (
+              <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                {mode === "recover"
+                  ? "¿Recuerdas tu contraseña? "
+                  : mode === "signIn"
+                    ? "¿Aún no tienes cuenta? "
+                    : "¿Ya tienes cuenta? "}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (mode === "recover") {
+                      changeMode("signIn");
+                      return;
+                    }
+
+                    changeMode(
+                      mode === "signIn"
+                        ? "signUp"
+                        : "signIn",
+                    );
+                  }}
+                  className="font-semibold text-[#176BFF] hover:underline"
+                >
+                  {mode === "recover"
+                    ? "Iniciar sesión"
+                    : mode === "signIn"
+                      ? "Crear cuenta"
+                      : "Iniciar sesión"}
+                </button>
+              </p>
+            )}
           </div>
+
           <p className="mt-5 text-center text-xs leading-relaxed text-slate-400">
-            Al continuar, aceptas las condiciones de uso y la política de
-            privacidad.
+            Al continuar, aceptas las condiciones de uso y la política
+            de privacidad.
           </p>
         </motion.section>
       </main>
     </div>
   );
 }
+
 
 function Stepper({ step }) {
   return (
