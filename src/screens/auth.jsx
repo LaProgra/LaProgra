@@ -794,6 +794,7 @@ function SwiftairImportHelp() {
 export function Onboarding({
   userId,
   onFinish,
+  onBackToLogin,
   setProfile,
   setSchedule,
   setSchedulePeriod,
@@ -811,6 +812,7 @@ export function Onboarding({
   const [scheduleSavedByServer, setScheduleSavedByServer] = useState(false);
   const [webcalUrl, setWebcalUrl] = useState("");
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [leavingOnboarding, setLeavingOnboarding] = useState(false);
 
   const fileRef = useRef(null);
 
@@ -884,6 +886,26 @@ export function Onboarding({
       setFileState("idle");
     }
   };
+  const exitOnboarding = async () => {
+    if (leavingOnboarding) return;
+
+    setLeavingOnboarding(true);
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("No se pudo cerrar la sesión", error);
+      setLeavingOnboarding(false);
+      return;
+    }
+
+    if (onBackToLogin) {
+      onBackToLogin();
+      return;
+    }
+
+    window.location.reload();
+  };
+
   const next = async () => {
     if (step === 1) {
       setOnboardingTouched(true);
@@ -1033,7 +1055,7 @@ export function Onboarding({
                   aria-expanded={helpModalOpen}
                   aria-controls="onboarding-import-help"
                 >
-                  <HelpCircle size={17} />
+                  <HelpCircle size={24} />
                   <span className="hidden sm:inline">Ayuda</span>
                 </button>
               </div>
@@ -1208,7 +1230,14 @@ export function Onboarding({
               Atrás
             </Button>
           ) : (
-            <span />
+            <Button
+              variant="ghost"
+              onClick={exitOnboarding}
+              disabled={leavingOnboarding}
+            >
+              <ArrowLeft size={17} />
+              Atrás
+            </Button>
           )}
           <Button
             onClick={next}
