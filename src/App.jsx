@@ -20,7 +20,7 @@ import { getDisplayTimeZone } from "./lib/timeZone";
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [screen, setScreen] = useState("login");
+  const [screen, setScreen] = useState("loading");
   const [theme, setTheme] = useState("light");
   const [profile, setProfile] = useState({
     airline: "Iberia",
@@ -59,6 +59,7 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) hydrate(data.session.user.id);
+      else setScreen("login");
     });
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
@@ -164,9 +165,12 @@ export default function App() {
       }}
     >
       <style>{`:root { color-scheme: light; } .dark { color-scheme: dark; } * { box-sizing: border-box; } button, input, select { font: inherit; } ::selection { background: rgba(23,107,255,.22); } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }`}</style>
+      {screen === "loading" && (
+        <div className="min-h-screen bg-[#F5F6F8] dark:bg-[#090B10]" />
+      )}{" "}
       {screen === "login" && (
         <Login
-          onContinue={() => setScreen("onboarding")}
+          onContinue={() => {}}
           theme={theme}
           setTheme={setTheme}
         />
