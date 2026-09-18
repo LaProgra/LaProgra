@@ -26,8 +26,8 @@ import {
   syncSwiftairSchedule,
 } from "../lib/scheduleService";
 
-export function Login({ onContinue, theme, setTheme }) {
-  const [mode, setMode] = useState("signIn");
+export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
+  const [mode, setMode] = useState(initialMode);
   const [loading, setLoading] = useState(false);
 
   const [email, setEmail] = useState("");

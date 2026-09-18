@@ -22,6 +22,9 @@ import { getDisplayTimeZone } from "./lib/timeZone";
 export default function App() {
   const [session, setSession] = useState(null);
   const [screen, setScreen] = useState("loading");
+  const [passwordRecovery, setPasswordRecovery] = useState(() =>
+    typeof window !== "undefined" && window.location.hash.includes("type=recovery"),
+  );
   const [theme, setTheme] = useState("light");
   const [profile, setProfile] = useState({
     airline: "Iberia",
@@ -57,20 +60,40 @@ export default function App() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session) hydrate(data.session.user.id);
-      else setScreen("login");
-    });
+    let recoveryDetected = passwordRecovery;
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (event, newSession) => {
+        if (event === "PASSWORD_RECOVERY") {
+          recoveryDetected = true;
+          setPasswordRecovery(true);
+          setSession(newSession);
+          setScreen("login");
+          return;
+        }
+
         setSession(newSession);
-        if (newSession) hydrate(newSession.user.id);
-        else setScreen("login");
+        if (newSession) {
+          if (recoveryDetected) {
+            setScreen("login");
+            return;
+          }
+          hydrate(newSession.user.id);
+        } else {
+          recoveryDetected = false;
+          setPasswordRecovery(false);
+          setScreen("login");
+        }
       },
     );
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      if (data.session && !recoveryDetected) hydrate(data.session.user.id);
+      else if (recoveryDetected) setScreen("login");
+      else setScreen("login");
+    });
     return () => subscription.subscription.unsubscribe();
-  }, []);
+  }, [passwordRecovery]);
 
   const logout = () => supabase.auth.signOut();
   const deleteAccount = async () => {
@@ -178,6 +201,7 @@ export default function App() {
       {screen === "login" && (
         <Login
           onContinue={() => {}}
+          initialMode={passwordRecovery ? "updatePassword" : "signIn"}
           theme={theme}
           setTheme={setTheme}
         />
