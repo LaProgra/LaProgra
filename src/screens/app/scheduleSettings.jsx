@@ -150,7 +150,7 @@ export function ScheduleSettings({
   };
 
   const handleReimportNew = async () => {
-    const nextUrl = newWebcalUrl.trim();
+    const nextUrl = newWebcalUrl.trim().replace(/^webcal/i, "https");
     if (!nextUrl) {
       setImportError("Pega el enlace nuevo antes de importar.");
       return;
@@ -324,7 +324,7 @@ export function ScheduleSettings({
                     icon={Link2}
                     type="url"
                     value={newWebcalUrl}
-                    onChange={(event) => setNewWebcalUrl(event.target.value)}
+                    onChange={(event) => setNewWebcalUrl(event.target.value.trim().replace(/^webcal/i, "https"))}
                     placeholder="webcal://…"
                     disabled={syncing}
                   />
