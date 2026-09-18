@@ -21,12 +21,15 @@ export function SettingsView({
   onDeleteSchedule,
   onSyncSchedule,
   userId,
+  onDeleteAccount,
   onBack,
 }) {
   const [editing, setEditing] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [username, setUsername] = useState(profile.username);
   const [base, setBase] = useState(profile.base);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const save = () => {
     if (!username.trim() || base.trim().length !== 3) return;
@@ -150,7 +153,11 @@ export function SettingsView({
       />
       <Button
         variant="ghost"
-        onClick={() => setDeleteConfirmation(true)}
+        onClick={() => {
+          setDeleteError("");
+          setDeleteConfirmation(true);
+        }}
+        disabled={deleting}
         className="mt-8 w-full text-red-600 dark:text-red-400"
       >
         <CircleAlert size={17} />
@@ -171,18 +178,36 @@ export function SettingsView({
             <h2 className="text-xl font-semibold">
               ¿Estás seguro de eliminar tu cuenta en LaProgra?
             </h2>
+            {deleteError && (
+              <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+                {deleteError}
+              </p>
+            )}
             <div className="mt-6 flex justify-end gap-2">
               <Button
                 variant="ghost"
                 onClick={() => setDeleteConfirmation(false)}
+                disabled={deleting}
               >
                 Cancelar
               </Button>
               <Button
                 variant="danger"
-                onClick={() => setDeleteConfirmation(false)}
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  setDeleteError("");
+                  try {
+                    await onDeleteAccount();
+                    setDeleteConfirmation(false);
+                  } catch (error) {
+                    setDeleteError(error.message || "No se ha podido eliminar la cuenta.");
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
               >
-                Aceptar
+                {deleting ? "Eliminando..." : "Aceptar"}
               </Button>
             </div>
           </div>

@@ -15,6 +15,7 @@ import {
   saveAdditionalScheduleEvents,
   saveProfile,
   syncSwiftairSchedule,
+  deleteAccount as deleteAccountService,
 } from "./lib/scheduleService";
 import { getDisplayTimeZone } from "./lib/timeZone";
 
@@ -72,6 +73,12 @@ export default function App() {
   }, []);
 
   const logout = () => supabase.auth.signOut();
+  const deleteAccount = async () => {
+    await deleteAccountService();
+    setProfile({ airline: "Iberia", base: "MAD", baseCity: getAirportCity("MAD"), username: "pedro", displayTimeZone: "base" });
+    setSchedule({});
+    await supabase.auth.signOut();
+  };
   const updateDisplayTimeZone = async (displayTimeZone) => {
     const nextProfile = { ...profile, displayTimeZone };
     setProfile(nextProfile);
@@ -223,6 +230,7 @@ export default function App() {
                 onDeleteSchedule={deleteSchedule}
                 onSyncSchedule={syncSchedule}
                 userId={session?.user?.id}
+                onDeleteAccount={deleteAccount}
                 onLogout={logout}
                 onBack={() => setActive("calendar")}
               />

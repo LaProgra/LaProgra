@@ -92,6 +92,15 @@ export async function syncSwiftairSchedule(webcalUrl) {
   return data;
 }
 
+export async function deleteAccount() {
+  const { data, error } = await supabase.functions.invoke("delete-account", { body: {} });
+  if (error) {
+    const errorBody = await error.context?.json?.().catch(() => null);
+    throw new Error(errorBody?.error || error.message);
+  }
+  if (!data?.success) throw new Error("No se ha podido eliminar la cuenta.");
+}
+
 function scheduleRows(userId, eventsByDay) {
   return Object.entries(eventsByDay).flatMap(([day, dayEvents]) =>
     dayEvents.map((event) => ({
