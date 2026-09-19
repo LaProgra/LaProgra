@@ -323,13 +323,6 @@ function classifySwiftairEvent(summary) {
     }
     const origin = flightMatch[2].toUpperCase();
     const destination = flightMatch[3].toUpperCase();
-    console.log("[DEBUG swiftair]", {
-      summary,
-      origin,
-      destination,
-      originCity: getAirportCity(origin),
-      destinationCity: getAirportCity(destination),
-    });
     return {
       label: `${origin}-${destination}`,
       desc: `${getAirportCity(origin) || origin} - ${getAirportCity(destination) || destination}`,

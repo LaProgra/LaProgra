@@ -694,7 +694,7 @@ function SwiftairImportHelp() {
       </p>
       <ol className="mt-5 space-y-4">
         <HelpStep number="1" title="Crea un calendario en Calendar">
-          Abre la app{" "}
+          Abre la app Calendar de Apple (o pincha {" "}
           <a
             href="https://www.icloud.com/calendar/"
             target="_blank"
@@ -705,9 +705,9 @@ function SwiftairImportHelp() {
               cursor: "pointer",
             }}
           >
-            Calendar
-          </a>{" "}
-          de Apple y crea un calendario. Ejemplo: “Swiftair”.
+            aquí
+          </a>
+          ) y crea un calendario. Ejemplo: “Swiftair”.
         </HelpStep>
         <HelpStep number="2" title="Exporta tus eventos">
           <p>

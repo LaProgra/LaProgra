@@ -6,7 +6,7 @@ import {
 import { importSwiftairSchedule } from "./swiftairScheduleImporter";
 
 export { getAirportCity, getAirportTimeZone };
-
+window.getAirportCity = getAirportCity;
 const scheduleImporters = {
   Iberia: importIberiaSchedule,
   Swiftair: importSwiftairSchedule,
