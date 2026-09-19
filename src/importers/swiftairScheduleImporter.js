@@ -61,17 +61,33 @@ const REST_CODES = new Set([
   "XX",
 ]);
 const RESERVE_CODES = new Set(["IM", "IMI", "N", "RE", "REI"]);
-const TRAINING_CODES = new Set(["CM", "CR", "FDM", "FI", "LPC", "MP", "OL", "OPC", "SE", "SI", "SM", "TR"]);
+const TRAINING_CODES = new Set([
+  "CM",
+  "CR",
+  "FDM",
+  "FI",
+  "LPC",
+  "MP",
+  "OL",
+  "OPC",
+  "SE",
+  "SI",
+  "SM",
+  "TR",
+]);
 
 function unfoldIcsLines(text) {
-  return text.replace(/\r\n?/g, "\n").split("\n").reduce((lines, line) => {
-    if (/^[ \t]/.test(line) && lines.length) {
-      lines[lines.length - 1] += line.slice(1);
-    } else {
-      lines.push(line);
-    }
-    return lines;
-  }, []);
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .reduce((lines, line) => {
+      if (/^[ \t]/.test(line) && lines.length) {
+        lines[lines.length - 1] += line.slice(1);
+      } else {
+        lines.push(line);
+      }
+      return lines;
+    }, []);
 }
 
 function unescapeIcsValue(value) {
@@ -118,7 +134,17 @@ function parseVEvents(text) {
     if (!properties) return;
 
     const property = parseIcsProperty(line);
-    if (property && ["UID", "DTSTART", "DTEND", "SUMMARY", "DESCRIPTION", "LOCATION"].includes(property.name)) {
+    if (
+      property &&
+      [
+        "UID",
+        "DTSTART",
+        "DTEND",
+        "SUMMARY",
+        "DESCRIPTION",
+        "LOCATION",
+      ].includes(property.name)
+    ) {
       properties[property.name] = property;
     }
   });
@@ -128,9 +154,9 @@ function parseVEvents(text) {
 
 function parseIcsDateTime(property) {
   if (!property?.value) return null;
-  const match = property.value.trim().match(
-    /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?(Z)?$/,
-  );
+  const match = property.value
+    .trim()
+    .match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?(Z)?$/);
   if (!match) return null;
 
   const date = {
@@ -142,7 +168,9 @@ function parseIcsDateTime(property) {
   if (isAllDay) {
     return {
       date,
-      instant: new Date(Date.UTC(date.year, date.month - 1, date.day)).toISOString(),
+      instant: new Date(
+        Date.UTC(date.year, date.month - 1, date.day),
+      ).toISOString(),
       isAllDay: true,
     };
   }
@@ -194,7 +222,13 @@ function parseReportingTime(description, date) {
   const match = description.match(/reporting\s+time\s*:\s*(\d{2})(\d{2})/i);
   if (!match) return null;
   return new Date(
-    Date.UTC(date.year, date.month - 1, date.day, Number(match[1]), Number(match[2])),
+    Date.UTC(
+      date.year,
+      date.month - 1,
+      date.day,
+      Number(match[1]),
+      Number(match[2]),
+    ),
   ).toISOString();
 }
 
@@ -217,13 +251,22 @@ function resolveFlightTimesFromLocation(interval, periodStart, periodEnd) {
   const anchorDay = anchor.getUTCDate();
 
   const buildCandidate = (dayOffset, time) =>
-    Date.UTC(anchorYear, anchorMonth, anchorDay + dayOffset, time.hours, time.minutes);
+    Date.UTC(
+      anchorYear,
+      anchorMonth,
+      anchorDay + dayOffset,
+      time.hours,
+      time.minutes,
+    );
 
   const toleranceMs = 60_000;
   let departureMs = null;
   for (let offset = -1; offset <= 2; offset += 1) {
     const candidate = buildCandidate(offset, interval.departure);
-    if (candidate >= periodStartMs - toleranceMs && candidate <= periodEndMs + toleranceMs) {
+    if (
+      candidate >= periodStartMs - toleranceMs &&
+      candidate <= periodEndMs + toleranceMs
+    ) {
       departureMs = candidate;
       break;
     }
@@ -280,12 +323,20 @@ function classifySwiftairEvent(summary) {
     }
     const origin = flightMatch[2].toUpperCase();
     const destination = flightMatch[3].toUpperCase();
+    console.log("[DEBUG swiftair]", {
+      summary,
+      origin,
+      destination,
+      originCity: getAirportCity(origin),
+      destinationCity: getAirportCity(destination),
+    });
     return {
       label: `${origin}-${destination}`,
       desc: `${getAirportCity(origin) || origin} - ${getAirportCity(destination) || destination}`,
       type: "duty",
       flightNumber,
-      situated: !flightNumber.startsWith("WT") && !flightNumber.startsWith("QY"),
+      situated:
+        !flightNumber.startsWith("WT") && !flightNumber.startsWith("QY"),
     };
   }
 
@@ -329,7 +380,9 @@ export function importSwiftairSchedule(text) {
       month: start.date.month,
       year: start.date.year,
       startsAt: start.isAllDay ? null : flightTimes?.startsAt || start.instant,
-      endsAt: start.isAllDay ? null : flightTimes?.endsAt || end?.instant || null,
+      endsAt: start.isAllDay
+        ? null
+        : flightTimes?.endsAt || end?.instant || null,
       firmaAt: start.isAllDay
         ? null
         : parseReportingTime(

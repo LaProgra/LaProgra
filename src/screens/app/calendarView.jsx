@@ -120,6 +120,7 @@ export function CalendarView({
   schedule,
   profile,
   showSlabTimes = false,
+  showRestDayEvents = false,
   timeZone,
   onToggleSlabTimes,
   onOpenSettings,
@@ -189,6 +190,7 @@ export function CalendarView({
   const eventsByVisibleDay = Object.entries(scheduleEvents).reduce(
     (eventsByDay, [sourceDay, dayEvents]) => {
       dayEvents.forEach((event) => {
+        if (!showRestDayEvents && event.type === "rest") return;
         const datedEvent = {
           ...event,
           day: event.day || Number(sourceDay),

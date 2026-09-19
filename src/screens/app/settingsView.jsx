@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ArrowLeft,
+  Check,
   CircleAlert,
   MapPin,
   Moon,
@@ -25,6 +26,8 @@ export function SettingsView({
   timeZonePreference,
   onTimeZoneChange,
   baseIata,
+  showRestDayEvents,
+  onToggleShowRestDayEvents,
   onDeleteAccount,
   onBack,
 }) {
@@ -34,6 +37,7 @@ export function SettingsView({
   const [base, setBase] = useState(profile.base);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const restDayToggleLabel = "¿Mostrar días libres?";
 
   const save = () => {
     if (!username.trim() || base.trim().length !== 3) return;
@@ -156,6 +160,34 @@ export function SettingsView({
           baseIata={baseIata}
           onTimeZoneChange={onTimeZoneChange}
         />
+      </section>
+      <h2 className="mb-2 mt-7 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Preferencias
+      </h2>
+      <section className="overflow-hidden rounded-[20px] border border-black/[.06] bg-white dark:border-white/[.07] dark:bg-[#14171A]">
+        <div className="flex items-center gap-4 p-5">
+          <div className="flex-1">
+            <p className="text-sm font-semibold">{restDayToggleLabel}</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showRestDayEvents}
+            aria-label={restDayToggleLabel}
+            onClick={() => onToggleShowRestDayEvents(!showRestDayEvents)}
+            className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#14171A] ${showRestDayEvents ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}
+          >
+            <span
+              className={`grid h-6 w-6 place-items-center rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.25)] transition-transform duration-200 ease-out ${showRestDayEvents ? "translate-x-5" : "translate-x-0"}`}
+            >
+              <Check
+                size={13}
+                strokeWidth={3}
+                className={`text-blue-600 transition-opacity duration-150 ${showRestDayEvents ? "opacity-100" : "opacity-0"}`}
+              />
+            </span>
+          </button>
+        </div>
       </section>
       <ScheduleSettings
         airline={profile.airline}

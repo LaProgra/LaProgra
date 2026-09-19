@@ -141,6 +141,8 @@ export function importIberiaSchedule(text) {
 
   rows.slice(1).forEach((row) => {
     const subject = (row[0] || "").trim();
+    if (!subject) return;
+
     const startDate = (row[1] || "").trim();
     const start = (row[2] || "").trim();
     const endDate = (row[3] || "").trim();
@@ -189,7 +191,7 @@ export function importIberiaSchedule(text) {
       : "";
     const lowerSubject = subject.toLowerCase();
     const type =
-      lowerSubject.includes("libre") || lowerSubject.includes("rest")
+      lowerSubject.includes("libre") || lowerSubject.includes("rest") || lowerSubject.includes("vacaciones")
         ? "rest"
         : lowerSubject.includes("reserva") || lowerSubject.includes("reserve")
           ? "reserve"

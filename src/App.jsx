@@ -39,6 +39,7 @@ export default function App() {
     return { month: now.getMonth() + 1, year: now.getFullYear() };
   });
   const [showSlabTimes, setShowSlabTimes] = useState(false);
+  const [showRestDayEvents, setShowRestDayEvents] = useState(false);
   const [active, setActive] = useState("calendar");
 
   const hydrate = async (userId) => {
@@ -232,6 +233,7 @@ export default function App() {
                 profile={profile}
                 schedule={{ events: schedule, period: schedulePeriod }}
                 showSlabTimes={showSlabTimes}
+                showRestDayEvents={showRestDayEvents}
                 timeZone={displayTimeZone}
                 onToggleSlabTimes={() =>
                   setShowSlabTimes((showTimes) => !showTimes)
@@ -257,6 +259,8 @@ export default function App() {
                 timeZonePreference={profile.displayTimeZone}
                 baseIata={profile.base}
                 onTimeZoneChange={updateDisplayTimeZone}
+                showRestDayEvents={showRestDayEvents}
+                onToggleShowRestDayEvents={setShowRestDayEvents}
                 onDeleteAccount={deleteAccount}
                 onLogout={logout}
                 onBack={() => setActive("calendar")}
