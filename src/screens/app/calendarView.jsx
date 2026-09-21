@@ -75,6 +75,7 @@ function CalendarDay({
   date,
   index,
   isToday,
+  isPast,
   isLastRow,
   events,
   theme,
@@ -109,6 +110,12 @@ function CalendarDay({
               />
             ))}
           </div>
+          {isPast && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-10 bg-black/[.1] dark:bg-black/[.32]"
+            />
+          )}
         </>
       )}
     </div>
@@ -331,6 +338,10 @@ export function CalendarView({
                   day.day === today.day &&
                   day.month === today.month &&
                   day.year === today.year
+                }
+                isPast={
+                  Date.UTC(day.year, day.month - 1, day.day) <
+                  Date.UTC(today.year, today.month - 1, today.day)
                 }
                 isLastRow={index >= monthDays.length - 7}
                 events={eventsByVisibleDay[`${day.year}-${day.month}-${day.day}`] || []}
