@@ -1,4 +1,4 @@
-import airportsCsv from "../../airports.csv?raw";
+import { getAirportCity, getAirportTimeZone } from "../lib/airports";
 import { zonedDateTimeToUtc } from "../lib/timeZone";
 
 const IBERIA_SCHEDULE_TIME_ZONE = "Europe/Madrid";
@@ -36,43 +36,7 @@ function parseCsvRows(text) {
   return rows;
 }
 
-function buildAirportCityMap(text) {
-  const rows = parseCsvRows(text);
-  const cityByIata = new Map();
-
-  rows.slice(1).forEach((row) => {
-    const iata = (row[0] || "").trim().toUpperCase();
-    const city = (row[1] || "").trim();
-    if (iata && city) cityByIata.set(iata, city);
-  });
-
-  return cityByIata;
-}
-
-const airportCityByIata = buildAirportCityMap(airportsCsv);
-
-function buildAirportTimeZoneMap(text) {
-  const rows = parseCsvRows(text);
-  const timeZoneByIata = new Map();
-
-  rows.slice(1).forEach((row) => {
-    const iata = (row[0] || "").trim().toUpperCase();
-    const timeZone = (row[2] || "").trim();
-    if (iata && timeZone) timeZoneByIata.set(iata, timeZone);
-  });
-
-  return timeZoneByIata;
-}
-
-const airportTimeZoneByIata = buildAirportTimeZoneMap(airportsCsv);
-
-export function getAirportCity(iata) {
-  return airportCityByIata.get(iata.trim().toUpperCase()) || "";
-}
-
-export function getAirportTimeZone(iata) {
-  return airportTimeZoneByIata.get(iata.trim().toUpperCase()) || "";
-}
+export { getAirportCity, getAirportTimeZone };
 
 function parseDate(value) {
   const match = value.match(

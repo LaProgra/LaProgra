@@ -95,8 +95,9 @@ function parseCsvRows(text: string) {
 }
 
 async function loadStaticData() {
-  const [airlines, swiftairCodes] = await Promise.all([
+  const [airlines, airports, swiftairCodes] = await Promise.all([
     Deno.readTextFile(new URL("./data/airlines.csv", import.meta.url)),
+    Deno.readTextFile(new URL("./data/airports.csv", import.meta.url)),
     Deno.readTextFile(new URL("./data/swt_codes.csv", import.meta.url)),
   ]);
 
@@ -105,6 +106,16 @@ async function loadStaticData() {
       .slice(1)
       .map(([iata, icao]) => [icao.toUpperCase(), iata.toUpperCase()]),
   );
+  const airportCityByIata = new Map<string, string>();
+  parseCsvRows(airports)
+    .slice(1)
+    .forEach(([iata, city]) => {
+      const normalizedIata = (iata || "").trim().toUpperCase();
+      const normalizedCity = (city || "").trim();
+      if (normalizedIata && normalizedCity) {
+        airportCityByIata.set(normalizedIata, normalizedCity);
+      }
+    });
   const swiftairCodesByIdent = new Map<string, { slab: string; explanation: string }>();
 
   parseCsvRows(swiftairCodes)
@@ -122,10 +133,10 @@ async function loadStaticData() {
         });
     });
 
-  return { airlineIataByIcao, swiftairCodesByIdent };
+  return { airlineIataByIcao, airportCityByIata, swiftairCodesByIdent };
 }
 
-const { airlineIataByIcao, swiftairCodesByIdent } = await loadStaticData();
+const { airlineIataByIcao, airportCityByIata, swiftairCodesByIdent } = await loadStaticData();
 
 function getTimeZoneOffset(date: Date, timeZone: string) {
   const offset = new Intl.DateTimeFormat("en-US", {
@@ -364,7 +375,7 @@ function classifySwiftairEvent(summary: string) {
     const destination = flightMatch[3].toUpperCase();
     return {
       label: `${origin}-${destination}`,
-      desc: `${origin} - ${destination}`,
+      desc: `${airportCityByIata.get(origin) || origin} - ${airportCityByIata.get(destination) || destination}`,
       type: "duty" as const,
       flightNumber,
       situated: !flightNumber.startsWith("WT") && !flightNumber.startsWith("QY"),

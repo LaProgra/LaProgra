@@ -1,6 +1,6 @@
 import airlinesCsv from "../../airlines.csv?raw";
 import swtCodesCsv from "../../swt_codes.csv?raw";
-import { getAirportCity } from "./iberiaScheduleImporter";
+import { getAirportCity } from "../lib/airports";
 import { getDateInTimeZone, zonedDateTimeToUtc } from "../lib/timeZone";
 
 function parseCsvRows(text) {
