@@ -42,6 +42,7 @@ export function SettingsView({
   const [deleteError, setDeleteError] = useState("");
   const [publicPin, setPublicPin] = useState("");
   const [publicError, setPublicError] = useState("");
+  const [editingPublicPin, setEditingPublicPin] = useState(false);
   const restDayToggleLabel = "¿Mostrar días libres?";
 
   const save = async () => {
@@ -214,12 +215,13 @@ export function SettingsView({
           <p className="text-sm text-slate-500">Comparte una versión de solo lectura mediante <span className="font-semibold">/{profile.username}</span>.</p>
           {profile.publicCalendarEnabled && <p className="break-all text-xs text-blue-600">{window.location.origin}/{profile.username}</p>}
           <label className="flex items-center justify-between gap-4 text-sm font-semibold">Activar enlace público
-            <input type="checkbox" checked={profile.publicCalendarEnabled === true} onChange={async (event) => { const enabled = event.target.checked; const next = { ...profile, publicCalendarEnabled: enabled }; setProfile(next); try { await saveProfile(userId, next); } catch (error) { setPublicError(error.message); } }} />
+            <button type="button" role="switch" aria-checked={profile.publicCalendarEnabled === true} onClick={async () => { const enabled = profile.publicCalendarEnabled !== true; const next = { ...profile, publicCalendarEnabled: enabled }; try { await saveProfile(userId, next); setProfile(next); setPublicError(""); } catch (error) { setPublicError(error.message); } }} className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${profile.publicCalendarEnabled ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}><span className={`grid h-6 w-6 place-items-center rounded-full bg-white shadow transition-transform ${profile.publicCalendarEnabled ? "translate-x-5" : "translate-x-0"}`}><Check size={13} className={profile.publicCalendarEnabled ? "text-blue-600" : "opacity-0"} /></span></button>
           </label>
-          <div className="flex gap-2">
+          {(!profile.publicCalendarPinHash || editingPublicPin) && <div className="flex gap-2">
             <input inputMode="numeric" maxLength={4} value={publicPin} onChange={(event) => setPublicPin(event.target.value.replace(/\\D/g, ""))} placeholder={profile.publicCalendarPinHash ? "Cambiar PIN" : "PIN de 4 dígitos"} className="min-h-11 flex-1 rounded-[12px] border border-black/10 bg-transparent px-3 dark:border-white/10" />
             <Button disabled={publicPin.length !== 4} onClick={async () => { try { const next = { ...profile, publicCalendarPinHash: await hashPublicPin(publicPin), publicCalendarEnabled: true }; await saveProfile(userId, next); setProfile(next); setPublicPin(""); setPublicError(""); } catch (error) { setPublicError(error.message); } }}>Guardar PIN</Button>
-          </div>
+          </div>}
+          {profile.publicCalendarPinHash && <div className="flex items-center gap-3"><span className="tracking-[.35em]" aria-label="PIN configurado">••••</span><Button variant="ghost" onClick={() => setEditingPublicPin(true)}>Cambiar PIN</Button></div>}
           {publicError && <p className="text-sm text-red-600">{publicError}</p>}
         </div>
       </section>
