@@ -219,9 +219,9 @@ export function SettingsView({
           </label>
           {(!profile.publicCalendarPinHash || editingPublicPin) && <div className="flex gap-2">
             <input inputMode="numeric" maxLength={4} value={publicPin} onChange={(event) => setPublicPin(event.target.value.replace(/\\D/g, ""))} placeholder={profile.publicCalendarPinHash ? "Cambiar PIN" : "PIN de 4 dígitos"} className="min-h-11 flex-1 rounded-[12px] border border-black/10 bg-transparent px-3 dark:border-white/10" />
-            <Button disabled={publicPin.length !== 4} onClick={async () => { try { const next = { ...profile, publicCalendarPinHash: await hashPublicPin(publicPin), publicCalendarEnabled: true }; await saveProfile(userId, next); setProfile(next); setPublicPin(""); setPublicError(""); } catch (error) { setPublicError(error.message); } }}>Guardar PIN</Button>
+            <Button disabled={publicPin.length !== 4} onClick={async () => { try { const next = { ...profile, publicCalendarPinHash: await hashPublicPin(publicPin), publicCalendarEnabled: true }; await saveProfile(userId, next); setProfile(next); setPublicPin(""); setEditingPublicPin(false); setPublicError(""); } catch (error) { setPublicError(error.message); } }}>Guardar PIN</Button>
           </div>}
-          {profile.publicCalendarPinHash && <div className="flex items-center gap-3"><span className="tracking-[.35em]" aria-label="PIN configurado">••••</span><Button variant="ghost" onClick={() => setEditingPublicPin(true)}>Cambiar PIN</Button></div>}
+          {profile.publicCalendarPinHash && !editingPublicPin && <Button variant="ghost" onClick={() => setEditingPublicPin(true)}>Cambiar PIN</Button>}
           {publicError && <p className="text-sm text-red-600">{publicError}</p>}
         </div>
       </section>

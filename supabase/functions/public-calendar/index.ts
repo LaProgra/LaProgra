@@ -24,9 +24,10 @@ Deno.serve(async (request) => {
       return genericError();
     }
     attempts.delete(key);
-    const { data: rows } = await admin.from("schedule_events").select("day, month, year, label, description, starts_at, ends_at, type, flight_number, situated, firma_at, source, visibility").eq("user_id", profile.id).neq("visibility", "private");
+    const { data: rows } = await admin.from("schedule_events").select("day, month, year, label, description, starts_at, ends_at, type, flight_number, situated, firma_at, source, visibility").eq("user_id", profile.id);
     const events: Record<string, unknown[]> = {};
     for (const row of rows || []) {
+      if (row.source === "manual" && row.visibility === "private") continue;
       (events[row.day] ||= []).push({ day: row.day, month: row.month, year: row.year, label: row.label, desc: row.description, startsAt: row.starts_at, endsAt: row.ends_at, type: row.type, flightNumber: row.flight_number, situated: row.situated, firmaAt: row.firma_at, source: row.source, visibility: row.visibility });
     }
     const first = (rows || [])[0];
