@@ -1,16 +1,31 @@
 import { supabase } from "./supabaseClient";
 
 export async function saveProfile(userId, profile) {
+  const username = String(profile.username || "").trim().toLowerCase();
+  if (!/^[a-z0-9_-]{3,30}$/.test(username)) {
+    throw new Error("El nombre de usuario debe tener entre 3 y 30 caracteres: letras, números, guiones o guiones bajos.");
+  }
   const { error } = await supabase.from("profiles").upsert({
     id: userId,
     airline: profile.airline,
     base: profile.base,
     base_city: profile.baseCity,
-    username: profile.username,
+    username,
     display_time_zone: profile.displayTimeZone || "base",
     include_manual_events_in_pdf: profile.includeManualEventsInPdf !== false,
+    public_calendar_enabled: profile.publicCalendarEnabled === true,
+    public_calendar_pin_hash: profile.publicCalendarPinHash || null,
   });
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505") throw new Error("Ese nombre de usuario ya está en uso.");
+    throw error;
+  }
+}
+
+export async function hashPublicPin(pin) {
+  const data = new TextEncoder().encode(String(pin));
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function loadProfile(userId) {

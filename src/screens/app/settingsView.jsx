@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { getAirportCity } from "../../importers";
 import { Button, Input } from "../../components/shared";
+import { hashPublicPin, saveProfile } from "../../lib/scheduleService";
 import { ScheduleSettings } from "./scheduleSettings";
 import { TimeZoneSelector } from "./appNav";
 
@@ -39,17 +40,27 @@ export function SettingsView({
   const [base, setBase] = useState(profile.base);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [publicPin, setPublicPin] = useState("");
+  const [publicError, setPublicError] = useState("");
   const restDayToggleLabel = "¿Mostrar días libres?";
 
-  const save = () => {
+  const save = async () => {
     if (!username.trim() || base.trim().length !== 3) return;
     const normalized = base.trim().toUpperCase();
-    setProfile({
+    const nextProfile = {
       ...profile,
       username: username.trim().toLowerCase(),
       base: normalized,
       baseCity: getAirportCity(normalized),
-    });
+    };
+    try {
+      if (userId) await saveProfile(userId, nextProfile);
+      setProfile(nextProfile);
+      setPublicError("");
+    } catch (error) {
+      setPublicError(error.message);
+      return;
+    }
     setEditing(false);
   };
 
@@ -114,7 +125,7 @@ export function SettingsView({
               </Button>
               <Button
                 onClick={save}
-                disabled={!username.trim() || base.length !== 3}
+                disabled={!/^[a-z0-9_-]{3,30}$/.test(username.trim()) || base.length !== 3}
               >
                 Guardar
               </Button>
@@ -195,6 +206,21 @@ export function SettingsView({
           <button type="button" role="switch" aria-checked={includeManualEventsInPdf} onClick={() => onToggleIncludeManualEventsInPdf(!includeManualEventsInPdf)} className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 ${includeManualEventsInPdf ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}>
             <span className={`grid h-6 w-6 place-items-center rounded-full bg-white shadow transition-transform ${includeManualEventsInPdf ? "translate-x-5" : ""}`}><Check size={13} className={includeManualEventsInPdf ? "text-blue-600" : "opacity-0"} /></span>
           </button>
+        </div>
+      </section>
+      <h2 className="mb-2 mt-7 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Calendario público</h2>
+      <section className="overflow-hidden rounded-[20px] border border-black/[.06] bg-white dark:border-white/[.07] dark:bg-[#14171A]">
+        <div className="space-y-3 p-5">
+          <p className="text-sm text-slate-500">Comparte una versión de solo lectura mediante <span className="font-semibold">/{profile.username}</span>.</p>
+          {profile.publicCalendarEnabled && <p className="break-all text-xs text-blue-600">{window.location.origin}/{profile.username}</p>}
+          <label className="flex items-center justify-between gap-4 text-sm font-semibold">Activar enlace público
+            <input type="checkbox" checked={profile.publicCalendarEnabled === true} onChange={async (event) => { const enabled = event.target.checked; const next = { ...profile, publicCalendarEnabled: enabled }; setProfile(next); try { await saveProfile(userId, next); } catch (error) { setPublicError(error.message); } }} />
+          </label>
+          <div className="flex gap-2">
+            <input inputMode="numeric" maxLength={4} value={publicPin} onChange={(event) => setPublicPin(event.target.value.replace(/\\D/g, ""))} placeholder={profile.publicCalendarPinHash ? "Cambiar PIN" : "PIN de 4 dígitos"} className="min-h-11 flex-1 rounded-[12px] border border-black/10 bg-transparent px-3 dark:border-white/10" />
+            <Button disabled={publicPin.length !== 4} onClick={async () => { try { const next = { ...profile, publicCalendarPinHash: await hashPublicPin(publicPin), publicCalendarEnabled: true }; await saveProfile(userId, next); setProfile(next); setPublicPin(""); setPublicError(""); } catch (error) { setPublicError(error.message); } }}>Guardar PIN</Button>
+          </div>
+          {publicError && <p className="text-sm text-red-600">{publicError}</p>}
         </div>
       </section>
       <ScheduleSettings

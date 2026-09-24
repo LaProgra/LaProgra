@@ -185,6 +185,7 @@ export function CalendarView({
   onLogout,
   onAddManualEvent,
   includeManualEventsInPdf = true,
+  readOnly = false,
 }) {
   const [view, setView] = useState("mes");
   const [selected, setSelected] = useState(null);
@@ -292,7 +293,7 @@ export function CalendarView({
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <button onClick={() => setShowManualModal(true)} aria-label="Crear evento" className="grid h-10 w-10 place-items-center rounded-full bg-[#176BFF] text-white shadow-sm transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><Plus size={20}/></button>
+          {!readOnly && <button onClick={() => setShowManualModal(true)} aria-label="Crear evento" className="grid h-10 w-10 place-items-center rounded-full bg-[#176BFF] text-white shadow-sm transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><Plus size={20}/></button>}
           <button
             onClick={downloadVisibleCalendar}
             aria-label="Descargar calendario en PDF"
@@ -312,7 +313,7 @@ export function CalendarView({
           >
             <Clock3 size={19} />
           </button>
-          <div className="relative ml-1">
+          {!readOnly && <div className="relative ml-1">
             <button
               onClick={() => setProfileMenu(!profileMenu)}
               className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 text-xs font-bold text-white"
@@ -345,7 +346,7 @@ export function CalendarView({
                 </button>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </header>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3 sm:mt-7">
@@ -553,7 +554,7 @@ export function CalendarView({
           </motion.aside>
         </>
       )}
-      {showManualModal && <ManualEventModal theme={theme} timeZone={timeZone} onClose={() => setShowManualModal(false)} onSave={onAddManualEvent} />}
+      {!readOnly && showManualModal && <ManualEventModal theme={theme} timeZone={timeZone} onClose={() => setShowManualModal(false)} onSave={onAddManualEvent} />}
     </div>
   );
 }

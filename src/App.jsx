@@ -19,8 +19,11 @@ import {
   deleteAccount as deleteAccountService,
 } from "./lib/scheduleService";
 import { getDisplayTimeZone } from "./lib/timeZone";
+import { PublicCalendar } from "./screens/publicCalendar";
 
 export default function App() {
+  const publicUsername = typeof window !== "undefined" && window.location.pathname.match(/^\/([^/]+)\/?$/)?.[1];
+  if (publicUsername && publicUsername !== "login") return <PublicCalendar username={decodeURIComponent(publicUsername)} />;
   const [session, setSession] = useState(null);
   const [screen, setScreen] = useState("loading");
   const [passwordRecovery, setPasswordRecovery] = useState(() =>
@@ -56,6 +59,8 @@ export default function App() {
       username: profileRow.username,
       displayTimeZone: profileRow.display_time_zone || "base",
       includeManualEventsInPdf: profileRow.include_manual_events_in_pdf !== false,
+      publicCalendarEnabled: profileRow.public_calendar_enabled === true,
+      publicCalendarPinHash: profileRow.public_calendar_pin_hash || "",
     });
     const { events } = await loadScheduleEvents(userId);
     setSchedule(events);

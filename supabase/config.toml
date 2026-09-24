@@ -5,3 +5,6 @@ static_files = [
   "./functions/swiftair-sync/data/swt_codes.csv",
   "./functions/swiftair-sync/data/airports.csv",
 ]
+
+[functions.public-calendar]
+verify_jwt = false

@@ -6,6 +6,8 @@ create table if not exists profiles (
   username text not null,
   display_time_zone text not null default 'base',
   include_manual_events_in_pdf boolean not null default true,
+  public_calendar_enabled boolean not null default false,
+  public_calendar_pin_hash text,
   updated_at timestamptz not null default now()
 );
 
@@ -31,7 +33,9 @@ create table if not exists schedule_events (
 -- Añade los campos al esquema si la tabla se creó con una versión anterior.
 alter table profiles
   add column if not exists display_time_zone text not null default 'base',
-  add column if not exists include_manual_events_in_pdf boolean not null default true;
+  add column if not exists include_manual_events_in_pdf boolean not null default true,
+  add column if not exists public_calendar_enabled boolean not null default false,
+  add column if not exists public_calendar_pin_hash text;
 alter table schedule_events
   add column if not exists starts_at timestamptz,
   add column if not exists ends_at timestamptz,
@@ -53,3 +57,5 @@ create policy "profiles_owner" on profiles
 
 create policy "schedule_events_owner" on schedule_events
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create unique index if not exists profiles_username_unique_idx on profiles (username);
