@@ -13,6 +13,7 @@ import {
   loadScheduleEvents,
   deleteScheduleMonth,
   saveAdditionalScheduleEvents,
+  saveManualEvent,
   saveProfile,
   syncSwiftairSchedule,
   deleteAccount as deleteAccountService,
@@ -139,6 +140,14 @@ export default function App() {
     });
     if (period) setSchedulePeriod(period);
   };
+  const addManualEvent = async (event) => {
+    const saved = await saveManualEvent(session.user.id, event);
+    setSchedule((current) => ({
+      ...current,
+      [saved.day]: [...(current[saved.day] || []), saved],
+    }));
+    setSchedulePeriod({ month: saved.month, year: saved.year });
+  };
   const syncSchedule = async (webcalUrl) => {
     if (!session?.user?.id) {
       throw new Error("Sesión no válida.");
@@ -240,6 +249,7 @@ export default function App() {
                 }
                 onOpenSettings={() => setActive("settings")}
                 onLogout={logout}
+                onAddManualEvent={addManualEvent}
               />
             )}{" "}
             {active === "compare" && (

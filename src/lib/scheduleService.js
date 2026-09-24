@@ -49,7 +49,8 @@ export async function saveAdditionalScheduleEvents(userId, eventsByDay) {
       .delete()
       .eq("user_id", userId)
       .eq("month", month)
-      .eq("year", year);
+      .eq("year", year)
+      .or("source.is.null,source.eq.imported");
     if (error) throw error;
   }
 
@@ -64,7 +65,8 @@ export async function deleteScheduleMonth(userId, month, year) {
     .delete()
     .eq("user_id", userId)
     .eq("month", month)
-    .eq("year", year);
+    .eq("year", year)
+    .or("source.is.null,source.eq.imported");
   if (error) throw error;
 }
 
@@ -92,6 +94,24 @@ export async function syncSwiftairSchedule(webcalUrl) {
   return data;
 }
 
+export async function saveManualEvent(userId, event) {
+  const row = scheduleRows(userId, { [event.day]: [event] })[0];
+  const { data, error } = await supabase
+    .from("schedule_events")
+    .insert({ ...row, source: "manual", visibility: event.visibility || "private" })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return {
+    ...event,
+    day: data.day,
+    month: data.month,
+    year: data.year,
+    source: data.source,
+    visibility: data.visibility,
+  };
+}
+
 export async function deleteAccount() {
   const { data, error } = await supabase.functions.invoke("delete-account", { body: {} });
   if (error) {
@@ -116,6 +136,8 @@ function scheduleRows(userId, eventsByDay) {
       flight_number: event.flightNumber || null,
       situated: event.situated || false,
       firma_at: event.firmaAt || null,
+      source: event.source || "imported",
+      visibility: event.visibility || "private",
     })),
   );
 }
@@ -147,6 +169,8 @@ export async function loadScheduleEvents(userId) {
       flightNumber: row.flight_number,
       situated: row.situated,
       firmaAt: row.firma_at,
+      source: row.source || "imported",
+      visibility: row.visibility || "private",
       month: row.month,
       year: row.year,
     });

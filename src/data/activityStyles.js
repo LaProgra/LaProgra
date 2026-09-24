@@ -1,4 +1,5 @@
 export const activityStyles = {
+  manual: { light: "bg-blue-50 border-blue-200 text-blue-900", dark: "bg-blue-950/70 border-blue-800 text-blue-100", dot: "bg-blue-500" },
   duty: {
     light: "bg-blue-50 border-blue-200 text-blue-900",
     dark: "bg-blue-950/70 border-blue-800 text-blue-100",

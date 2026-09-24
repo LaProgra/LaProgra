@@ -6,6 +6,7 @@ import {
   Clock3,
   LogOut,
   Pencil,
+  Plus,
   Settings,
   X,
 } from "lucide-react";
@@ -18,7 +19,55 @@ import {
   formatEventTimeRange,
   formatFirmaTime,
   getEventDisplayDate,
+  zonedDateTimeToUtc,
 } from "../../lib/timeZone";
+
+function toDateInput(date) {
+  return `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+}
+
+function ManualEventModal({ theme, timeZone, onClose, onSave }) {
+  const now = getDateInTimeZone(timeZone);
+  const [form, setForm] = useState({
+    title: "", description: "", startDate: toDateInput(now), startTime: "09:00", timeZone,
+    endDate: toDateInput(now), endTime: "10:00", visibility: "private",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!form.title.trim()) return setError("Escribe un título.");
+    const start = new Date(`${form.startDate}T${form.startTime}`);
+    const end = new Date(`${form.endDate}T${form.endTime}`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      return setError("La finalización debe ser posterior al comienzo.");
+    }
+    setSaving(true); setError("");
+    try {
+      const [sy, sm, sd] = form.startDate.split("-").map(Number);
+      const startsAt = zonedDateTimeToUtc({ year: sy, month: sm, day: sd }, form.startTime, form.timeZone);
+      const [ey, em, ed] = form.endDate.split("-").map(Number);
+      const endsAt = zonedDateTimeToUtc({ year: ey, month: em, day: ed }, form.endTime, form.timeZone);
+      await onSave({ label: form.title.trim(), desc: form.description.trim(), startsAt, endsAt, type: "manual", source: "manual", visibility: form.visibility, day: getDateInTimeZone(form.timeZone, startsAt).day, month: getDateInTimeZone(form.timeZone, startsAt).month, year: getDateInTimeZone(form.timeZone, startsAt).year });
+      onClose();
+    } catch (saveError) { setError(saveError.message || "No se pudo guardar el evento."); }
+    finally { setSaving(false); }
+  };
+  const field = "mt-1 w-full rounded-[10px] border border-black/[.1] bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 dark:border-white/[.1] dark:bg-white/[.06]";
+  return <>
+    <button aria-label="Cerrar nuevo evento" onClick={onClose} className="fixed inset-0 z-50 bg-black/25 backdrop-blur-[2px]" />
+    <form onSubmit={submit} className="fixed inset-x-3 bottom-3 z-[51] max-h-[calc(100vh-24px)] overflow-y-auto rounded-[22px] bg-white p-5 shadow-2xl dark:bg-[#181B20] sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2">
+      <div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-semibold">Nuevo evento</h2><button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 dark:bg-white/[.08]"><X size={18}/></button></div>
+      <label className="block text-xs font-semibold">Título<input autoFocus value={form.title} onChange={set("title")} className={field} /></label>
+      <label className="mt-3 block text-xs font-semibold">Descripción<textarea value={form.description} onChange={set("description")} rows={2} className={field} /></label>
+      <div className="mt-3 grid grid-cols-2 gap-2"><label className="text-xs font-semibold">Comienzo<input type="date" value={form.startDate} onChange={set("startDate")} className={field}/><input type="time" value={form.startTime} onChange={set("startTime")} className={field}/></label><label className="text-xs font-semibold">Finalización<input type="date" value={form.endDate} onChange={set("endDate")} className={field}/><input type="time" value={form.endTime} onChange={set("endTime")} className={field}/></label></div>
+      <label className="mt-3 block text-xs font-semibold">Uso horario<select value={form.timeZone} onChange={set("timeZone")} className={field}><option value={timeZone}>{timeZone} (actual)</option><option value="UTC">UTC</option><option value={Intl.DateTimeFormat().resolvedOptions().timeZone}>{Intl.DateTimeFormat().resolvedOptions().timeZone}</option></select></label>
+      <fieldset className="mt-4"><legend className="text-xs font-semibold">Visibilidad</legend><div className="mt-2 grid grid-cols-3 gap-2">{[["private","Oculto"],["friends","Solo amigos"],["public","Visible"]].map(([value,label]) => <label key={value} className={`cursor-pointer rounded-[10px] border px-2 py-2 text-center text-xs font-semibold ${form.visibility === value ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200" : "border-black/[.1] dark:border-white/[.1]"}`}><input type="radio" name="visibility" value={value} checked={form.visibility === value} onChange={set("visibility")} className="sr-only"/>{label}</label>)}</div></fieldset>
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}<button disabled={saving} className="mt-5 min-h-11 w-full rounded-[12px] bg-[#176BFF] font-semibold text-white disabled:opacity-60">{saving ? "Guardando…" : "Crear evento"}</button>
+    </form>
+  </>;
+}
 
 function parseCsvRows(text) {
   return text
@@ -132,10 +181,12 @@ export function CalendarView({
   onToggleSlabTimes,
   onOpenSettings,
   onLogout,
+  onAddManualEvent,
 }) {
   const [view, setView] = useState("mes");
   const [selected, setSelected] = useState(null);
   const [profileMenu, setProfileMenu] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
   const userInitial = (profile?.username || "U").charAt(0).toUpperCase();
   const selectedAirlineName = getAirlineNameFromFlightNumber(selected?.flightNumber);
   const scheduleEvents = schedule.events || schedule;
@@ -229,6 +280,7 @@ export function CalendarView({
           </p>
         </div>
         <div className="flex items-center gap-1.5">
+          <button onClick={() => setShowManualModal(true)} aria-label="Crear evento" className="grid h-10 w-10 place-items-center rounded-full bg-[#176BFF] text-white shadow-sm transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><Plus size={20}/></button>
           <button
             onClick={onToggleSlabTimes}
             aria-pressed={showSlabTimes}
@@ -482,6 +534,7 @@ export function CalendarView({
           </motion.aside>
         </>
       )}
+      {showManualModal && <ManualEventModal theme={theme} timeZone={timeZone} onClose={() => setShowManualModal(false)} onSave={onAddManualEvent} />}
     </div>
   );
 }

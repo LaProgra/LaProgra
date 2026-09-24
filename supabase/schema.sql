@@ -22,6 +22,8 @@ create table if not exists schedule_events (
   flight_number text,
   situated boolean default false,
   firma_at timestamptz,
+  source text not null default 'imported',
+  visibility text not null default 'private',
   created_at timestamptz not null default now()
 );
 
@@ -31,7 +33,9 @@ alter table profiles
 alter table schedule_events
   add column if not exists starts_at timestamptz,
   add column if not exists ends_at timestamptz,
-  add column if not exists firma_at timestamptz;
+  add column if not exists firma_at timestamptz,
+  add column if not exists source text not null default 'imported',
+  add column if not exists visibility text not null default 'private';
 
 -- No hay datos heredados que migrar: los instantes se guardan únicamente en UTC.
 alter table schedule_events
