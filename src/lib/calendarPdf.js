@@ -145,10 +145,7 @@ export function downloadCalendarPdf({
 
   const airports = new Map();
   const descriptions = new Map();
-  Object.values(filtered)
-    .flat()
-    .filter((event) => includeManualEventsInPdf || event.source !== "manual")
-    .forEach((event) => {
+  monthDays.flatMap((date) => eventList(date)).forEach((event) => {
       if (isFlight(event))
         flightCodes(event).forEach((iata) =>
           airports.set(iata, getAirportCity(iata) || iata),
