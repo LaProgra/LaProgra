@@ -61,7 +61,9 @@ export default function App() {
       includeManualEventsInPdf: profileRow.include_manual_events_in_pdf !== false,
       publicCalendarEnabled: profileRow.public_calendar_enabled === true,
       publicCalendarPinHash: profileRow.public_calendar_pin_hash || "",
+      showRestDayEvents: profileRow.show_rest_day_events === true,
     });
+    setShowRestDayEvents(profileRow.show_rest_day_events === true);
     const { events } = await loadScheduleEvents(userId);
     setSchedule(events);
     setScreen("app");
@@ -145,6 +147,18 @@ export default function App() {
       return merged;
     });
     if (period) setSchedulePeriod(period);
+  };
+  const updateShowRestDayEvents = async (value) => {
+    const nextProfile = { ...profile, showRestDayEvents: value };
+    setShowRestDayEvents(value);
+    setProfile(nextProfile);
+    try {
+      if (session?.user?.id) await saveProfile(session.user.id, nextProfile);
+    } catch (error) {
+      setShowRestDayEvents(profile.showRestDayEvents === true);
+      setProfile(profile);
+      throw error;
+    }
   };
   const addManualEvent = async (event) => {
     const saved = await saveManualEvent(session.user.id, event);
@@ -277,7 +291,7 @@ export default function App() {
                 baseIata={profile.base}
                 onTimeZoneChange={updateDisplayTimeZone}
                 showRestDayEvents={showRestDayEvents}
-                onToggleShowRestDayEvents={setShowRestDayEvents}
+                onToggleShowRestDayEvents={updateShowRestDayEvents}
                 includeManualEventsInPdf={profile.includeManualEventsInPdf !== false}
                 onToggleIncludeManualEventsInPdf={(value) => {
                   const nextProfile = { ...profile, includeManualEventsInPdf: value };

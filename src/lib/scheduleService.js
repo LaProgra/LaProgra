@@ -15,6 +15,7 @@ export async function saveProfile(userId, profile) {
     include_manual_events_in_pdf: profile.includeManualEventsInPdf !== false,
     public_calendar_enabled: profile.publicCalendarEnabled === true,
     public_calendar_pin_hash: profile.publicCalendarPinHash || null,
+    show_rest_day_events: profile.showRestDayEvents === true,
   });
   if (error) {
     if (error.code === "23505") throw new Error("Ese nombre de usuario ya está en uso.");

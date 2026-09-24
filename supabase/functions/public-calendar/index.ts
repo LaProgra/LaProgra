@@ -17,7 +17,7 @@ Deno.serve(async (request) => {
     const current = attempts.get(key);
     if (current && current.until > Date.now() && current.count >= 5) return genericError();
     const admin = createClient(Deno.env.get("SUPABASE_URL") || "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "", { auth: { persistSession: false } });
-    const { data: profile } = await admin.from("profiles").select("id, username, base, base_city, display_time_zone, include_manual_events_in_pdf, public_calendar_enabled, public_calendar_pin_hash").eq("username", normalized).maybeSingle();
+    const { data: profile } = await admin.from("profiles").select("id, username, base, base_city, display_time_zone, include_manual_events_in_pdf, show_rest_day_events, public_calendar_enabled, public_calendar_pin_hash").eq("username", normalized).maybeSingle();
     if (!profile?.public_calendar_enabled || !profile.public_calendar_pin_hash || profile.public_calendar_pin_hash !== pinHash) {
       const next = current && current.until > Date.now() ? { count: current.count + 1, until: current.until } : { count: 1, until: Date.now() + 15 * 60 * 1000 };
       attempts.set(key, next);
@@ -30,7 +30,6 @@ Deno.serve(async (request) => {
       if (row.source === "manual" && row.visibility === "private") continue;
       (events[row.day] ||= []).push({ day: row.day, month: row.month, year: row.year, label: row.label, desc: row.description, startsAt: row.starts_at, endsAt: row.ends_at, type: row.type, flightNumber: row.flight_number, situated: row.situated, firmaAt: row.firma_at, source: row.source, visibility: row.visibility });
     }
-    const first = (rows || [])[0];
-    return json({ profile: { username: profile.username, base: profile.base, baseCity: profile.base_city }, events, period: first ? { month: first.month, year: first.year } : null, timeZone: profile.display_time_zone, includeManualEventsInPdf: profile.include_manual_events_in_pdf !== false });
+    return json({ profile: { username: profile.username, base: profile.base, baseCity: profile.base_city }, events, period: null, timeZone: profile.display_time_zone, includeManualEventsInPdf: profile.include_manual_events_in_pdf !== false, showRestDayEvents: profile.show_rest_day_events === true });
   } catch { return genericError(); }
 });

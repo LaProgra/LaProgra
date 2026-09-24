@@ -8,6 +8,7 @@ create table if not exists profiles (
   include_manual_events_in_pdf boolean not null default true,
   public_calendar_enabled boolean not null default false,
   public_calendar_pin_hash text,
+  show_rest_day_events boolean not null default false,
   updated_at timestamptz not null default now()
 );
 
@@ -36,6 +37,8 @@ alter table profiles
   add column if not exists include_manual_events_in_pdf boolean not null default true,
   add column if not exists public_calendar_enabled boolean not null default false,
   add column if not exists public_calendar_pin_hash text;
+alter table profiles
+  add column if not exists show_rest_day_events boolean not null default false;
 alter table schedule_events
   add column if not exists starts_at timestamptz,
   add column if not exists ends_at timestamptz,
