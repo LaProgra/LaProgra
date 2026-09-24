@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Download,
   LogOut,
   Pencil,
   Plus,
@@ -13,6 +14,7 @@ import {
 import airlinesCsv from "../../../airlines.csv?raw";
 import { activityStyles } from "../../data/activityStyles";
 import { LaPrograMark } from "../../components/shared";
+import { downloadCalendarPdf } from "../../lib/calendarPdf";
 import {
   getEventDayIndicator,
   getDateInTimeZone,
@@ -95,7 +97,7 @@ export function Slab({
   showTime = false,
   timeZone,
 }) {
-  const s = activityStyles[event.type];
+  const s = activityStyles[event.situated ? "situated" : event.type];
   const dayIndicator = getEventDayIndicator(event, timeZone);
   const showsTime = !compact || showTime;
   return (
@@ -104,7 +106,7 @@ export function Slab({
       className={`slab flex w-full flex-col justify-center overflow-hidden rounded-[8px] border px-0.5 py-1 text-center transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${showsTime ? "min-h-[36px]" : "min-h-[22px]"} ${theme === "dark" ? s.dark : s.light}`}
     >
       <div className="slab__label whitespace-nowrap font-extrabold leading-tight tracking-wide">
-        {event.label}
+        {event.situated ? `[${event.label}]` : event.label}
       </div>
       {showsTime && (
         <div className="slab__time mt-0.5 whitespace-nowrap font-medium opacity-75">
@@ -182,6 +184,7 @@ export function CalendarView({
   onOpenSettings,
   onLogout,
   onAddManualEvent,
+  includeManualEventsInPdf = true,
 }) {
   const [view, setView] = useState("mes");
   const [selected, setSelected] = useState(null);
@@ -264,6 +267,15 @@ export function CalendarView({
     },
     {},
   );
+  const downloadVisibleCalendar = () => downloadCalendarPdf({
+    username: profile?.username,
+    month: visiblePeriod.month,
+    year: visiblePeriod.year,
+    timeZone,
+    monthDays,
+    eventsByVisibleDay,
+    includeManualEventsInPdf,
+  });
 
   return (
     <div className="mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5">
@@ -281,6 +293,13 @@ export function CalendarView({
         </div>
         <div className="flex items-center gap-1.5">
           <button onClick={() => setShowManualModal(true)} aria-label="Crear evento" className="grid h-10 w-10 place-items-center rounded-full bg-[#176BFF] text-white shadow-sm transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><Plus size={20}/></button>
+          <button
+            onClick={downloadVisibleCalendar}
+            aria-label="Descargar calendario en PDF"
+            className="grid h-10 w-10 place-items-center rounded-full text-slate-600 transition hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]"
+          >
+            <Download size={19} />
+          </button>
           <button
             onClick={onToggleSlabTimes}
             aria-pressed={showSlabTimes}

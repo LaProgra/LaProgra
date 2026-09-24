@@ -5,6 +5,7 @@ create table if not exists profiles (
   base_city text,
   username text not null,
   display_time_zone text not null default 'base',
+  include_manual_events_in_pdf boolean not null default true,
   updated_at timestamptz not null default now()
 );
 
@@ -29,7 +30,8 @@ create table if not exists schedule_events (
 
 -- Añade los campos al esquema si la tabla se creó con una versión anterior.
 alter table profiles
-  add column if not exists display_time_zone text not null default 'base';
+  add column if not exists display_time_zone text not null default 'base',
+  add column if not exists include_manual_events_in_pdf boolean not null default true;
 alter table schedule_events
   add column if not exists starts_at timestamptz,
   add column if not exists ends_at timestamptz,

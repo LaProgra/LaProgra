@@ -8,6 +8,7 @@ export async function saveProfile(userId, profile) {
     base_city: profile.baseCity,
     username: profile.username,
     display_time_zone: profile.displayTimeZone || "base",
+    include_manual_events_in_pdf: profile.includeManualEventsInPdf !== false,
   });
   if (error) throw error;
 }

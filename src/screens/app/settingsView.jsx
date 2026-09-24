@@ -28,6 +28,8 @@ export function SettingsView({
   baseIata,
   showRestDayEvents,
   onToggleShowRestDayEvents,
+  includeManualEventsInPdf,
+  onToggleIncludeManualEventsInPdf,
   onDeleteAccount,
   onBack,
 }) {
@@ -186,6 +188,12 @@ export function SettingsView({
                 className={`text-blue-600 transition-opacity duration-150 ${showRestDayEvents ? "opacity-100" : "opacity-0"}`}
               />
             </span>
+          </button>
+        </div>
+        <div className="flex items-center gap-4 border-t border-black/[.06] p-5 dark:border-white/[.07]">
+          <div className="flex-1"><p className="text-sm font-semibold">Incluir eventos manuales en el PDF</p></div>
+          <button type="button" role="switch" aria-checked={includeManualEventsInPdf} onClick={() => onToggleIncludeManualEventsInPdf(!includeManualEventsInPdf)} className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 ${includeManualEventsInPdf ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}>
+            <span className={`grid h-6 w-6 place-items-center rounded-full bg-white shadow transition-transform ${includeManualEventsInPdf ? "translate-x-5" : ""}`}><Check size={13} className={includeManualEventsInPdf ? "text-blue-600" : "opacity-0"} /></span>
           </button>
         </div>
       </section>

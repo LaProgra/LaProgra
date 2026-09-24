@@ -1,5 +1,9 @@
 export const activityStyles = {
-  manual: { light: "bg-blue-50 border-blue-200 text-blue-900", dark: "bg-blue-950/70 border-blue-800 text-blue-100", dot: "bg-blue-500" },
+  manual: {
+    light: "bg-cyan-50 border-cyan-200 text-cyan-900",
+    dark: "bg-cyan-950/70 border-cyan-800 text-cyan-100",
+    dot: "bg-cyan-500",
+  },
   duty: {
     light: "bg-blue-50 border-blue-200 text-blue-900",
     dark: "bg-blue-950/70 border-blue-800 text-blue-100",
@@ -19,5 +23,10 @@ export const activityStyles = {
     light: "bg-amber-50 border-amber-200 text-amber-900",
     dark: "bg-amber-950/70 border-amber-800 text-amber-100",
     dot: "bg-amber-500",
+  },
+  situated: {
+    light: "bg-rose-50 border-rose-200 text-rose-900",
+    dark: "bg-rose-950/70 border-rose-800 text-rose-100",
+    dot: "bg-rose-500",
   },
 };

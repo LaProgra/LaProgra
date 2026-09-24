@@ -55,6 +55,7 @@ export default function App() {
       baseCity: profileRow.base_city,
       username: profileRow.username,
       displayTimeZone: profileRow.display_time_zone || "base",
+      includeManualEventsInPdf: profileRow.include_manual_events_in_pdf !== false,
     });
     const { events } = await loadScheduleEvents(userId);
     setSchedule(events);
@@ -100,7 +101,7 @@ export default function App() {
   const logout = () => supabase.auth.signOut();
   const deleteAccount = async () => {
     await deleteAccountService();
-    setProfile({ airline: "Iberia", base: "MAD", baseCity: getAirportCity("MAD"), username: "pedro", displayTimeZone: "base" });
+    setProfile({ airline: "Iberia", base: "MAD", baseCity: getAirportCity("MAD"), username: "pedro", displayTimeZone: "base", includeManualEventsInPdf: true });
     setSchedule({});
     await supabase.auth.signOut();
   };
@@ -244,6 +245,7 @@ export default function App() {
                 showSlabTimes={showSlabTimes}
                 showRestDayEvents={showRestDayEvents}
                 timeZone={displayTimeZone}
+                includeManualEventsInPdf={profile.includeManualEventsInPdf !== false}
                 onToggleSlabTimes={() =>
                   setShowSlabTimes((showTimes) => !showTimes)
                 }
@@ -271,6 +273,12 @@ export default function App() {
                 onTimeZoneChange={updateDisplayTimeZone}
                 showRestDayEvents={showRestDayEvents}
                 onToggleShowRestDayEvents={setShowRestDayEvents}
+                includeManualEventsInPdf={profile.includeManualEventsInPdf !== false}
+                onToggleIncludeManualEventsInPdf={(value) => {
+                  const nextProfile = { ...profile, includeManualEventsInPdf: value };
+                  setProfile(nextProfile);
+                  return session?.user?.id ? saveProfile(session.user.id, nextProfile) : undefined;
+                }}
                 onDeleteAccount={deleteAccount}
                 onLogout={logout}
                 onBack={() => setActive("calendar")}
