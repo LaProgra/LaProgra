@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ChevronLeft,
@@ -191,6 +191,9 @@ export function CalendarView({
   const [selected, setSelected] = useState(null);
   const [profileMenu, setProfileMenu] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
+  const agendaTodayRef = useRef(null);
+  const agendaDayRefs = useRef(new Map());
+  const agendaHeaderRef = useRef(null);
   const userInitial = (profile?.username || "U").charAt(0).toUpperCase();
   const selectedAirlineName = getAirlineNameFromFlightNumber(selected?.flightNumber);
   const scheduleEvents = schedule.events || schedule;
@@ -202,6 +205,17 @@ export function CalendarView({
   useEffect(() => {
     setVisiblePeriod(schedulePeriod);
   }, [schedulePeriod.month, schedulePeriod.year]);
+
+  useEffect(() => {
+    if (view !== "agenda") return;
+    requestAnimationFrame(() => {
+      const todayElement = agendaTodayRef.current;
+      if (!todayElement) return;
+      todayElement.scrollIntoView({ behavior: "auto", block: "start" });
+      const headerHeight = agendaHeaderRef.current?.getBoundingClientRect().height || 0;
+      window.scrollBy(0, -(headerHeight + 8));
+    });
+  }, [view]);
 
   const monthDate = new Date(visiblePeriod.year, visiblePeriod.month - 1, 1);
   const monthLabel = new Intl.DateTimeFormat("es-ES", {
@@ -268,6 +282,33 @@ export function CalendarView({
     },
     {},
   );
+  const todayKey = `${today.year}-${today.month}-${today.day}`;
+  const agendaDays = Array.from(
+    new Set(Object.keys(eventsByVisibleDay)),
+  )
+    .map((dateKey) => {
+      const [year, month, day] = dateKey.split("-").map(Number);
+      return { dateKey, year, month, day, events: eventsByVisibleDay[dateKey] || [] };
+    })
+    .sort((left, right) => Date.UTC(left.year, left.month - 1, left.day) - Date.UTC(right.year, right.month - 1, right.day));
+
+  useEffect(() => {
+    if (view !== "agenda") return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top)[0];
+        if (!visible) return;
+        const dateKey = visible.target.dataset.agendaDate;
+        const [year, month] = dateKey.split("-").map(Number);
+        setVisiblePeriod((current) => current.year === year && current.month === month ? current : { year, month });
+      },
+      { rootMargin: "-118px 0px -65% 0px", threshold: 0 },
+    );
+    agendaDayRefs.current.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [view, agendaDays.length]);
   const downloadVisibleCalendar = () => downloadCalendarPdf({
     username: profile?.username,
     month: visiblePeriod.month,
@@ -280,6 +321,7 @@ export function CalendarView({
 
   return (
     <div className="mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5">
+      <div ref={view === "agenda" ? agendaHeaderRef : undefined} className={view === "agenda" ? "sticky top-0 z-20 -mx-3 bg-[#F5F6F8] px-3 pb-2 pt-3 dark:bg-[#090B10] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" : ""}>
       <header className="flex min-h-12 items-center justify-between gap-3">
         <div className="lg:hidden">
           <LaPrograMark compact />
@@ -383,6 +425,7 @@ export function CalendarView({
           ))}
         </div>
       </div>
+      </div>
       {view === "mes" ? (
         <motion.section
           initial={{ opacity: 0 }}
@@ -431,25 +474,30 @@ export function CalendarView({
           animate={{ opacity: 1, y: 0 }}
           className="mt-4 space-y-2"
         >
-          {Object.entries(eventsByVisibleDay)
-            .filter(([dateKey]) =>
-              dateKey.startsWith(`${visiblePeriod.year}-${visiblePeriod.month}-`),
-            )
-            .map(([dateKey, visibleEvents]) => {
-            const day = Number(dateKey.split("-")[2]);
+          {agendaDays.map(({ dateKey, year, month, day, events: visibleEvents }) => {
+            const agendaMonthLabel = new Intl.DateTimeFormat("es-ES", { month: "short" })
+              .format(new Date(year, month - 1, day))
+              .replace(".", "")
+              .toUpperCase();
             return (
               <div
                 key={dateKey}
+                ref={(element) => {
+                  if (element) agendaDayRefs.current.set(dateKey, element);
+                  else agendaDayRefs.current.delete(dateKey);
+                  if (dateKey === todayKey) agendaTodayRef.current = element;
+                }}
+                data-agenda-date={dateKey}
                 className="flex gap-3 rounded-[16px] border border-black/[.06] bg-white p-3 dark:border-white/[.07] dark:bg-[#14171A]"
               >
                 <div className="w-10 shrink-0 text-center">
                   <span className="block text-[10px] font-semibold uppercase text-slate-400">
-                    {monthShortLabel}
+                    {agendaMonthLabel}
                   </span>
                   <span className="text-xl font-semibold">{day}</span>
                 </div>
                 <div className="flex-1 space-y-2">
-                  {visibleEvents.map((event, index) => (
+                  {visibleEvents.length ? visibleEvents.map((event, index) => (
                     <Slab
                       key={index}
                       event={event}
@@ -459,7 +507,7 @@ export function CalendarView({
                       timeZone={timeZone}
                       onClick={() => setSelected({ ...event, day })}
                     />
-                  ))}
+                  )) : <p className="py-1 text-sm text-slate-400">Sin eventos</p>}
                 </div>
               </div>
             );
