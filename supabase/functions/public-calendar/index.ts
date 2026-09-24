@@ -30,6 +30,12 @@ Deno.serve(async (request) => {
       if (row.source === "manual" && row.visibility === "private") continue;
       (events[row.day] ||= []).push({ day: row.day, month: row.month, year: row.year, label: row.label, desc: row.description, startsAt: row.starts_at, endsAt: row.ends_at, type: row.type, flightNumber: row.flight_number, situated: row.situated, firmaAt: row.firma_at, source: row.source, visibility: row.visibility });
     }
+    Object.values(events).forEach((dayEvents) => dayEvents.sort((a: any, b: any) => {
+      const timestamp = (event: any) => event.startsAt
+        ? new Date(event.startsAt).getTime()
+        : Date.UTC(event.year, event.month - 1, event.day);
+      return timestamp(a) - timestamp(b);
+    }));
     return json({ profile: { username: profile.username, base: profile.base, baseCity: profile.base_city }, events, period: null, timeZone: profile.display_time_zone, includeManualEventsInPdf: profile.include_manual_events_in_pdf !== false, showRestDayEvents: profile.show_rest_day_events === true });
   } catch { return genericError(); }
 });
