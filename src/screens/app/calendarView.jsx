@@ -199,6 +199,7 @@ export function CalendarView({
   const agendaTodayRef = useRef(null);
   const agendaDayRefs = useRef(new Map());
   const agendaHeaderRef = useRef(null);
+  const agendaInitialPositionedRef = useRef(false);
   const hasMountedRef = useRef(false);
   const userInitial = (profile?.username || "U").charAt(0).toUpperCase();
   const selectedAirlineName = getAirlineNameFromFlightNumber(selected?.flightNumber);
@@ -227,18 +228,6 @@ export function CalendarView({
       container.scrollTop += elementRect.top - containerRect.top;
     });
   }, [view, visiblePeriod.month, visiblePeriod.year, today.day, today.month, today.year]);
-
-  useEffect(() => {
-    if (view !== "agenda") return;
-    requestAnimationFrame(() => {
-      const todayElement = agendaTodayRef.current;
-      const container = agendaScrollRef.current;
-      if (!todayElement || !container) return;
-      const containerRect = container.getBoundingClientRect();
-      const elementRect = todayElement.getBoundingClientRect();
-      container.scrollTop += elementRect.top - containerRect.top;
-    });
-  }, [view]);
 
   const monthDate = new Date(visiblePeriod.year, visiblePeriod.month - 1, 1);
   const monthLabel = new Intl.DateTimeFormat("es-ES", {
@@ -322,9 +311,28 @@ export function CalendarView({
       .at(-1)?.dateKey || agendaDays[0]?.dateKey;
 
   useEffect(() => {
+    if (view !== "agenda") return;
+    agendaInitialPositionedRef.current = false;
+    requestAnimationFrame(() => {
+      const todayElement = agendaTodayRef.current;
+      const container = agendaScrollRef.current;
+      if (todayElement && container) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = todayElement.getBoundingClientRect();
+        container.scrollTop += elementRect.top - containerRect.top;
+      }
+      agendaInitialPositionedRef.current = true;
+    });
+    return () => {
+      agendaInitialPositionedRef.current = false;
+    };
+  }, [view, agendaScrollTargetKey, agendaDays.length]);
+
+  useEffect(() => {
     if (view !== "agenda") return undefined;
     const observer = new IntersectionObserver(
       (entries) => {
+        if (!agendaInitialPositionedRef.current) return;
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top)[0];
@@ -333,7 +341,7 @@ export function CalendarView({
         const [year, month] = dateKey.split("-").map(Number);
         setVisiblePeriod((current) => current.year === year && current.month === month ? current : { year, month });
       },
-      { rootMargin: "-118px 0px -65% 0px", threshold: 0 },
+      { root: agendaScrollRef.current, rootMargin: "-8px 0px -65% 0px", threshold: 0 },
     );
     agendaDayRefs.current.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
@@ -349,7 +357,7 @@ export function CalendarView({
   });
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5">
+    <div className="flex min-h-0 h-[100svh] flex-col overflow-hidden mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5">
       <div ref={view === "agenda" ? agendaHeaderRef : undefined} className={`${view === "mes" ? "shrink-0" : ""} ${view === "agenda" ? "sticky top-0 z-20 -mx-3 bg-[#F5F6F8] px-3 pb-2 pt-3 dark:bg-[#090B10] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" : ""}`}>
       <header className="flex min-h-12 items-center justify-between gap-3">
         <div className="lg:hidden">
