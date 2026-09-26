@@ -195,6 +195,7 @@ export function CalendarView({
   const [showManualModal, setShowManualModal] = useState(false);
   const monthScrollRef = useRef(null);
   const monthTodayRef = useRef(null);
+  const agendaScrollRef = useRef(null);
   const agendaTodayRef = useRef(null);
   const agendaDayRefs = useRef(new Map());
   const agendaHeaderRef = useRef(null);
@@ -231,10 +232,11 @@ export function CalendarView({
     if (view !== "agenda") return;
     requestAnimationFrame(() => {
       const todayElement = agendaTodayRef.current;
-      if (!todayElement) return;
-      todayElement.scrollIntoView({ behavior: "auto", block: "start" });
-      const headerHeight = agendaHeaderRef.current?.getBoundingClientRect().height || 0;
-      window.scrollBy(0, -(headerHeight + 8));
+      const container = agendaScrollRef.current;
+      if (!todayElement || !container) return;
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = todayElement.getBoundingClientRect();
+      container.scrollTop += elementRect.top - containerRect.top;
     });
   }, [view]);
 
@@ -347,7 +349,7 @@ export function CalendarView({
   });
 
   return (
-    <div className={`${view === "mes" ? "flex h-[100dvh] flex-col overflow-hidden" : ""} mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5`}>
+    <div className="flex h-[100dvh] flex-col overflow-hidden mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5">
       <div ref={view === "agenda" ? agendaHeaderRef : undefined} className={`${view === "mes" ? "shrink-0" : ""} ${view === "agenda" ? "sticky top-0 z-20 -mx-3 bg-[#F5F6F8] px-3 pb-2 pt-3 dark:bg-[#090B10] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" : ""}`}>
       <header className="flex min-h-12 items-center justify-between gap-3">
         <div className="lg:hidden">
@@ -508,7 +510,8 @@ export function CalendarView({
         <motion.section
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-4 space-y-2"
+          className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain"
+          ref={agendaScrollRef}
         >
           {agendaDays.map(({ dateKey, year, month, day, events: visibleEvents }) => {
             const agendaMonthLabel = new Intl.DateTimeFormat("es-ES", { month: "short" })
