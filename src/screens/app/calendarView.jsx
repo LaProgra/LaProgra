@@ -124,6 +124,7 @@ export function Slab({
 
 function CalendarDay({
   date,
+  dayRef,
   index,
   isToday,
   isPast,
@@ -139,6 +140,7 @@ function CalendarDay({
     date && (date.month !== date.visibleMonth || date.year !== date.visibleYear);
   return (
     <div
+      ref={dayRef}
       className={`relative min-h-[82px] border-b border-r border-black/[.055] p-1 dark:border-white/[.06] sm:min-h-[116px] sm:p-1.5 lg:min-h-[132px] ${index % 7 === 6 ? "border-r-0" : ""} ${isLastRow ? "border-b-0" : ""} ${isToday ? "bg-blue-50/40 dark:bg-blue-950/10" : ""}`}
     >
       {date && (
@@ -191,20 +193,39 @@ export function CalendarView({
   const [selected, setSelected] = useState(null);
   const [profileMenu, setProfileMenu] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
+  const monthScrollRef = useRef(null);
+  const monthTodayRef = useRef(null);
   const agendaTodayRef = useRef(null);
   const agendaDayRefs = useRef(new Map());
   const agendaHeaderRef = useRef(null);
+  const hasMountedRef = useRef(false);
   const userInitial = (profile?.username || "U").charAt(0).toUpperCase();
   const selectedAirlineName = getAirlineNameFromFlightNumber(selected?.flightNumber);
   const scheduleEvents = schedule.events || schedule;
-  const now = new Date();
-  const schedulePeriod =
-    schedule.period || { month: now.getMonth() + 1, year: now.getFullYear() };
-  const [visiblePeriod, setVisiblePeriod] = useState(schedulePeriod);
+  const today = getDateInTimeZone(timeZone);
+  const currentPeriod = { month: today.month, year: today.year };
+  const schedulePeriod = schedule.period || currentPeriod;
+  const [visiblePeriod, setVisiblePeriod] = useState(currentPeriod);
 
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
     setVisiblePeriod(schedulePeriod);
   }, [schedulePeriod.month, schedulePeriod.year]);
+
+  useEffect(() => {
+    if (view !== "mes" || visiblePeriod.month !== today.month || visiblePeriod.year !== today.year) return;
+    requestAnimationFrame(() => {
+      const container = monthScrollRef.current;
+      const todayElement = monthTodayRef.current;
+      if (!container || !todayElement) return;
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = todayElement.getBoundingClientRect();
+      container.scrollTop += elementRect.top - containerRect.top;
+    });
+  }, [view, visiblePeriod.month, visiblePeriod.year, today.day, today.month, today.year]);
 
   useEffect(() => {
     if (view !== "agenda") return;
@@ -251,7 +272,6 @@ export function CalendarView({
   });
   const weekdays = ["L", "M", "X", "J", "V", "S", "D"];
   const fullWeekdays = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sáb", "Dom"];
-  const today = getDateInTimeZone(timeZone);
   const moveMonth = (offset) => {
     const nextMonth = new Date(
       visiblePeriod.year,
@@ -292,6 +312,13 @@ export function CalendarView({
     })
     .sort((left, right) => Date.UTC(left.year, left.month - 1, left.day) - Date.UTC(right.year, right.month - 1, right.day));
 
+  const agendaTodayIndex = agendaDays.findIndex((entry) => entry.dateKey === todayKey);
+  const agendaScrollTargetKey = agendaTodayIndex >= 0
+    ? todayKey
+    : agendaDays
+      .filter((entry) => Date.UTC(entry.year, entry.month - 1, entry.day) < Date.UTC(today.year, today.month - 1, today.day))
+      .at(-1)?.dateKey || agendaDays[0]?.dateKey;
+
   useEffect(() => {
     if (view !== "agenda") return undefined;
     const observer = new IntersectionObserver(
@@ -308,7 +335,7 @@ export function CalendarView({
     );
     agendaDayRefs.current.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [view, agendaDays.length]);
+  }, [view, agendaDays.length, agendaScrollTargetKey]);
   const downloadVisibleCalendar = () => downloadCalendarPdf({
     username: profile?.username,
     month: visiblePeriod.month,
@@ -443,11 +470,18 @@ export function CalendarView({
               </div>
             ))}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div ref={monthScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className="grid grid-cols-7">
             {monthDays.map((day, index) => (
               <CalendarDay
                 key={index}
+                dayRef={
+                  day.day === today.day &&
+                  day.month === today.month &&
+                  day.year === today.year
+                    ? monthTodayRef
+                    : undefined
+                }
                 date={day}
                 index={index}
                 isToday={
@@ -487,7 +521,7 @@ export function CalendarView({
                 ref={(element) => {
                   if (element) agendaDayRefs.current.set(dateKey, element);
                   else agendaDayRefs.current.delete(dateKey);
-                  if (dateKey === todayKey) agendaTodayRef.current = element;
+                  if (dateKey === agendaScrollTargetKey) agendaTodayRef.current = element;
                 }}
                 data-agenda-date={dateKey}
                 className="flex gap-3 rounded-[16px] border border-black/[.06] bg-white p-3 dark:border-white/[.07] dark:bg-[#14171A]"
