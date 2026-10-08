@@ -81,7 +81,10 @@ export function ScheduleSettings({
     setImportError("");
     setImportSuccess("");
     try {
-      const parsed = importSchedule(await file.text(), airline);
+      const parsed = await importSchedule(
+        importMethod === "pdf" ? file : await file.text(),
+        airline,
+      );
       const count = Object.values(parsed.events).flat().length;
       if (!count) {
         throw new Error("No se han encontrado actividades en el archivo.");
@@ -231,7 +234,7 @@ export function ScheduleSettings({
               ref={scheduleFileRef}
               className="hidden"
               type="file"
-              accept=".csv,text/csv"
+              accept={importMethod === "pdf" ? ".pdf,application/pdf" : ".csv,text/csv"}
               onChange={importAdditionalSchedule}
             />
             <Button

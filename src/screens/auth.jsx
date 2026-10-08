@@ -685,6 +685,27 @@ function IberiaImportHelp() {
   );
 }
 
+function VuelingImportHelp() {
+  return (
+    <>
+      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        Descarga tu programación de Vueling en formato PDF y selecciona el archivo obtenido.
+      </p>
+      <ol className="mt-5 space-y-4">
+        <HelpStep number="1" title="Descarga tu programación">
+          Obtén desde el sistema de Vueling el PDF mensual de tu programación.
+        </HelpStep>
+        <HelpStep number="2" title="Comprueba el archivo">
+          Asegúrate de que contiene los días y actividades del periodo que quieres importar.
+        </HelpStep>
+        <HelpStep number="3" title="Impórtalo en LaProgra">
+          Cierra esta ventana y pulsa "selecciona o arrastra tu PDF".
+        </HelpStep>
+      </ol>
+    </>
+  );
+}
+
 function SwiftairImportHelp() {
   return (
     <>
@@ -791,6 +812,73 @@ function SwiftairImportHelp() {
   );
 }
 
+const IMPORT_CONFIG = {
+  default: {
+    method: "csv",
+    accept: ".csv,text/csv",
+    description: <>Selecciona el archivo CSV de tu programación.</>,
+    idleTitle: "Selecciona o arrastra tu CSV",
+    loadingTitle: "Procesando programación",
+    loadingDescription: "Descartando datos no necesarios",
+    successTitle: "Programación preparada",
+    inputPlaceholder: "",
+    inputHint: "",
+    helpTitle: "Cómo descargar tu programación",
+    idleSubtitle: "Archivo CSV de programación · Máx. 10 MB",
+    replaceLabel: "Pulsa para sustituir el archivo",
+    privacy: <>El archivo se procesa localmente durante la importación.</>,
+    help: IberiaImportHelp,
+  },
+  Iberia: {
+    method: "csv",
+    accept: ".csv,text/csv",
+    description: <>Selecciona el archivo CSV que hay en <strong>ibNet - Programación - Outlook</strong>. LaProgra interpretará los eventos de tu programación.</>,
+    idleTitle: "Selecciona o arrastra tu CSV",
+    loadingTitle: "Procesando programación",
+    loadingDescription: "Descartando datos no necesarios",
+    successTitle: "Programación preparada",
+    inputPlaceholder: "",
+    inputHint: "",
+    helpTitle: "Cómo descargar tu programación",
+    idleSubtitle: "Archivo de programación de Iberia · Máx. 10 MB",
+    replaceLabel: "Pulsa para sustituir el archivo",
+    privacy: <>La columna <strong>Description</strong> se descarta por completo durante la importación y no se conserva.</>,
+    help: IberiaImportHelp,
+  },
+  Swiftair: {
+    method: "webcal",
+    description: "Pega el enlace webcal de Swiftair. LaProgra interpretará los eventos de tu programación.",
+    inputLabel: "Enlace webcal",
+    inputPlaceholder: "webcal://",
+    inputHint: "Podrás cambiar el enlace en la configuración de LaProgra.",
+    idleTitle: "Importa tu enlace webcal",
+    loadingTitle: "Procesando programación",
+    loadingDescription: "Descartando datos no necesarios",
+    successTitle: "Programación preparada",
+    helpTitle: "Cómo obtener tu enlace webcal",
+    idleSubtitle: "Calendario de programación de Swiftair",
+    replaceLabel: "Pulsa para actualizar desde el enlace",
+    privacy: "El enlace se guarda para mantener tu programación actualizada automáticamente.",
+    help: SwiftairImportHelp,
+  },
+  Vueling: {
+    method: "pdf",
+    accept: ".pdf,application/pdf",
+    description: "Selecciona el PDF mensual de tu programación de Vueling. LaProgra interpretará sus eventos.",
+    idleTitle: "Selecciona o arrastra tu PDF",
+    loadingTitle: "Procesando programación",
+    loadingDescription: "Descartando datos no necesarios",
+    successTitle: "Programación preparada",
+    inputPlaceholder: "",
+    inputHint: "",
+    helpTitle: "Cómo descargar tu PDF de programación",
+    idleSubtitle: "PDF de programación de Vueling · Máx. 10 MB",
+    replaceLabel: "Pulsa para sustituir el PDF",
+    privacy: "El PDF se procesa localmente y tu nº empleado/checkeo nunca llega a un servidor.",
+    help: VuelingImportHelp,
+  },
+};
+
 export function Onboarding({
   userId,
   onFinish,
@@ -815,6 +903,8 @@ export function Onboarding({
   const [leavingOnboarding, setLeavingOnboarding] = useState(false);
 
   const fileRef = useRef(null);
+  const importConfig = IMPORT_CONFIG[airline] || IMPORT_CONFIG.default;
+  const ImportHelp = importConfig.help;
 
   useEffect(() => {
     if (!helpModalOpen) return undefined;
@@ -847,18 +937,17 @@ export function Onboarding({
     setScheduleSavedByServer(savedByServer);
     setTimeout(() => setFileState("success"), 1150);
   };
-  const completeImport = (text) => {
-    showImportedSchedule(importSchedule(text, airline));
+  const completeImport = async (input) => {
+    showImportedSchedule(await importSchedule(input, airline));
   };
   const processFile = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     setFileState("loading");
     setImportError("");
-    file
-      .text()
-      .then((text) => {
-        completeImport(text);
+    Promise.resolve(importConfig.method === "pdf" ? file : file.text())
+      .then((input) => {
+        return completeImport(input);
       })
       .catch((error) => {
         console.error("No se pudo importar la programación", error);
@@ -994,6 +1083,7 @@ export function Onboarding({
                       </option>
                       <option value="Iberia">Iberia</option>
                       <option value="Swiftair">Swiftair</option>
+                      <option value="Vueling">Vueling</option>
                       <option disabled>Más aerolíneas próximamente</option>
                     </select>
                   </div>
@@ -1060,8 +1150,13 @@ export function Onboarding({
                 </button>
               </div>
               <p className="mt-3 max-w-lg text-slate-600 dark:text-slate-400">
-                {airline === "Swiftair" ? (
+                {importConfig.description}
+              </p>
+              <p className="hidden">
+                {false ? (
                   "Pega el enlace webcal de Swiftair. LaProgra interpretará los eventos de tu programación."
+                ) : false ? (
+                  "Selecciona el PDF mensual de tu programación de Vueling. LaProgra interpretará los eventos de tu programación."
                 ) : (
                   <>
                     Selecciona el archivo CSV que hay en{" "}
@@ -1070,16 +1165,16 @@ export function Onboarding({
                   </>
                 )}
               </p>
-              {airline === "Swiftair" && (
+              {importConfig.method === "webcal" && (
                 <div className="mt-6">
                   <Input
-                    label="Enlace webcal"
+                    label={importConfig.inputLabel}
                     icon={Link2}
                     type="url"
                     value={webcalUrl}
                     onChange={(event) => setWebcalUrl(event.target.value)}
-                    placeholder="webcal://…"
-                    hint="Podrás cambiar el enlace en la configuración de LaProgra."
+                    placeholder={importConfig.inputPlaceholder}
+                    hint={importConfig.inputHint}
                   />
                 </div>
               )}
@@ -1087,18 +1182,18 @@ export function Onboarding({
                 ref={fileRef}
                 className="hidden"
                 type="file"
-                accept=".csv,text/csv"
+                accept={importConfig.accept}
                 onChange={processFile}
               />
               <button
                 onClick={() =>
-                  airline === "Swiftair"
+                  importConfig.method === "webcal"
                     ? processWebcal()
                     : fileRef.current?.click()
                 }
                 disabled={
                   fileState === "loading" ||
-                  (airline === "Swiftair" && !webcalUrl.trim())
+                  (importConfig.method === "webcal" && !webcalUrl.trim())
                 }
                 className={`mt-8 flex min-h-[245px] w-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed p-7 text-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45 ${fileState === "success" ? "border-emerald-300 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/20" : "border-slate-300 bg-white hover:border-blue-400 hover:bg-blue-50/30 dark:border-white/15 dark:bg-[#14171A] dark:hover:border-blue-700"}`}
               >
@@ -1108,12 +1203,13 @@ export function Onboarding({
                       <CloudUpload size={26} />
                     </div>
                     <h2 className="mt-5 text-lg font-semibold">
-                      {airline === "Swiftair"
-                        ? "Importa tu enlace webcal"
-                        : "Selecciona o arrastra tu CSV"}
+                      {importConfig.idleTitle}
                     </h2>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                      {airline === "Swiftair"
+                      {importConfig.idleSubtitle}
+                    </p>
+                    <p className="hidden">
+                      {false && airline === "Swiftair"
                         ? "Calendario de programación de Swiftair"
                         : "Archivo de programación de Iberia · Máx. 10 MB"}
                     </p>
@@ -1123,9 +1219,15 @@ export function Onboarding({
                   <>
                     <span className="h-11 w-11 animate-spin rounded-full border-[3px] border-blue-100 border-t-[#176BFF] dark:border-blue-950 dark:border-t-blue-400" />
                     <h2 className="mt-5 text-lg font-semibold">
-                      Procesando programación…
+                      {importConfig.loadingTitle}
                     </h2>
                     <p className="mt-2 text-sm text-slate-500">
+                      {importConfig.loadingDescription}
+                    </p>
+                    <h2 className="hidden">
+                      Procesando programación…
+                    </h2>
+                    <p className="hidden">
                       Descartando datos no necesarios
                     </p>
                   </>
@@ -1136,6 +1238,9 @@ export function Onboarding({
                       <Check size={27} />
                     </div>
                     <h2 className="mt-5 text-lg font-semibold">
+                      {importConfig.successTitle}
+                    </h2>
+                    <h2 className="hidden">
                       Programación preparada
                     </h2>
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
@@ -1147,19 +1252,20 @@ export function Onboarding({
                         ` · ${new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(importedPeriod.year, importedPeriod.month - 1, 1))}`}
                     </p>
                     <span className="mt-4 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                      {airline === "Swiftair"
-                        ? "Pulsa para actualizar desde el enlace"
-                        : "Pulsa para sustituir el archivo"}
+                      {importConfig.replaceLabel}
                     </span>
                   </>
                 )}
               </button>
               <div className="mt-5 flex gap-3 rounded-[16px] bg-slate-100 p-4 text-sm text-slate-600 dark:bg-white/[.05] dark:text-slate-400">
                 <LockKeyhole size={18} className="mt-0.5 shrink-0" />
-                <p>
-                  {airline === "Swiftair" ? (
+                <p>{importConfig.privacy}</p>
+                <p className="hidden">
+                  {false ? (
                     "El enlace se guarda para mantener tu programación actualizada automáticamente."
-                  ) : (
+                  )  : false ? (
+                  "Tus datos de nombre de checkeo y número de empleado nunca se importan. LaProgra los descarta antes de guardar tu programación en el servidor."
+                ) : (
                     <>
                       La columna{" "}
                       <strong className="text-slate-800 dark:text-slate-200">
@@ -1248,7 +1354,7 @@ export function Onboarding({
                   !username.trim())) ||
               (step === 2 &&
                 (fileState === "loading" ||
-                  (airline === "Swiftair" && !webcalUrl.trim())))
+                  (importConfig.method === "webcal" && !webcalUrl.trim())))
             }
           >
             {step === 3 ? "Ver mi calendario" : "Continuar"}
@@ -1280,7 +1386,10 @@ export function Onboarding({
                   id="onboarding-import-help-title"
                   className="mt-1 text-xl font-semibold"
                 >
-                  {airline === "Swiftair"
+                  {importConfig.helpTitle}
+                </h2>
+                <h2 className="hidden">
+                  {false && airline === "Swiftair"
                     ? "Cómo obtener tu enlace webcal"
                     : "Cómo descargar tu programación"}
                 </h2>
@@ -1301,11 +1410,7 @@ export function Onboarding({
               id="onboarding-import-help-description"
               className="min-h-0 overflow-y-auto px-6 pt-5"
             >
-              {airline === "Swiftair" ? (
-                <SwiftairImportHelp />
-              ) : (
-                <IberiaImportHelp />
-              )}
+              <ImportHelp />
             </div>
 
             {/* Footer */}
