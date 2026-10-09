@@ -587,7 +587,7 @@ export function CalendarView({
                       {selectedAirlineName}
                     </div>
                   )}
-                  {selected.flightNumber?.startsWith("GRD") && (
+                  {(selected.flightNumber?.startsWith("GRD") || selected.flightNumber?.includes("TAXI")) && (
                     <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
                       Por carretera
                     </div>

@@ -327,6 +327,29 @@ function parseFlight(tokens, allowPartial = false) {
 }
 function parseOther(tokens) {
   if (!tokens.length) return null;
+  if (tokens[0].toUpperCase() === 'TAXI') {
+    const values = tokens.slice(1),
+      times = values.filter((t) => TIME.test(t)),
+      airports = values.filter((t) => AIRPORT.test(t));
+    if (times.length >= 3 && airports.length >= 2) {
+      const startTime = stripTimePrefix(times[1]),
+        endTime = stripTimePrefix(times.at(-1)),
+        startMinutes = minutes(startTime),
+        endMinutes = minutes(endTime);
+      return {
+        type: 'other',
+        code: 'TAXI',
+        reportTime: stripTimePrefix(times[0]),
+        startTime,
+        endTime,
+        endDayOffset: startMinutes != null && endMinutes != null && endMinutes < startMinutes ? 1 : 0,
+        origin: airports[0].replace(/^\*/, ''),
+        destination: airports[1].replace(/^\*/, ''),
+        positioned: true,
+        details: [],
+      };
+    }
+  }
   const values = tokens.slice(1),
     simulatorTimes = values.filter((t) => SIMULATOR_TIME.test(t)),
     isSimulator = simulatorTimes.some((t) => t.startsWith('B')) &&
@@ -548,6 +571,20 @@ function toImportedEvent(activity, date) {
       firmaAt: activity.reportTime ? utcInstant(date, activity.reportTime) : null,
       startsAt: utcInstant(date, activity.departureTime),
       endsAt: utcInstant(date, activity.arrivalTime, activity.arrivalDayOffset),
+      isAllDay: false,
+      type: 'duty',
+    };
+  }
+  if (activity.code === 'TAXI' && activity.origin && activity.destination) {
+    const origin = activity.origin.toUpperCase(), destination = activity.destination.toUpperCase();
+    return {
+      day: date.day, month: date.month, year: date.year,
+      label: `${origin}-${destination}`,
+      desc: `${getAirportCity(origin) || origin} - ${getAirportCity(destination) || destination}`,
+      flightNumber: 'TAXI', situated: true,
+      firmaAt: activity.reportTime ? utcInstant(date, activity.reportTime) : null,
+      startsAt: activity.startTime ? utcInstant(date, activity.startTime) : null,
+      endsAt: activity.endTime ? utcInstant(date, activity.endTime, activity.endDayOffset || 0) : null,
       isAllDay: false,
       type: 'duty',
     };
