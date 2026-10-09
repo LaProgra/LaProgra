@@ -285,7 +285,9 @@ function lines(items) {
 }
 
 function parseFlight(tokens, allowPartial = false) {
-  if (!FLIGHT.test(tokens[0] || '')) return null;
+  const flightIndex = tokens.findIndex((token) => FLIGHT.test(token));
+  if (flightIndex === -1) return null;
+  tokens = tokens.slice(flightIndex);
   let i = 1,
     reportTime = null;
   if (TIME.test(tokens[i] || '') && TIME.test(tokens[i + 1] || ''))
@@ -495,6 +497,32 @@ function classifyOther(code) {
   if (/^(?:LM|TRN|SIM|LPC|OPC|REU|VICC)/.test(value)) return 'training';
   return 'duty';
 }
+
+export function mergeConsecutiveOtherActivities(activities) {
+  const merged = [];
+  for (const activity of activities) {
+    const previous = merged.at(-1);
+    if (
+      previous?.type === 'other' &&
+      activity.type === 'other' &&
+      previous.code === activity.code
+    ) {
+      const details = [...previous.details, ...activity.details].filter(
+        (detail, index, values) => values.indexOf(detail) === index,
+      );
+      previous.endTime = activity.endTime ?? previous.endTime;
+      previous.endDayOffset = activity.endDayOffset ?? previous.endDayOffset;
+      previous.details = details;
+      continue;
+    }
+    merged.push({
+      ...activity,
+      details: activity.type === 'other' ? [...activity.details] : activity.details,
+    });
+  }
+  return merged;
+}
+
 function toImportedEvent(activity, date) {
   if (activity.type === 'flight') {
     const origin = activity.origin.toUpperCase(), destination = activity.destination.toUpperCase();
@@ -528,7 +556,8 @@ export async function extractCrewSchedule(file) {
   const events = {};
   for (const day of extracted.days) {
     const date = parseIsoDate(day.date);
-    const imported = day.activities.map((activity) => toImportedEvent(activity, date));
+    const activities = mergeConsecutiveOtherActivities(day.activities);
+    const imported = activities.map((activity) => toImportedEvent(activity, date));
     if (imported.length) events[date.day] = imported;
   }
   return { events, period: { month: extracted.month + 1, year: extracted.year } };
