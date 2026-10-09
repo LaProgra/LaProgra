@@ -26,6 +26,7 @@ import {
   saveProfile,
   saveScheduleEvents,
   syncSwiftairSchedule,
+  isUsernameAvailable,
 } from "../lib/scheduleService";
 
 export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
@@ -892,6 +893,8 @@ export function Onboarding({
   const [base, setBase] = useState("");
   const [username, setUsername] = useState("");
   const [onboardingTouched, setOnboardingTouched] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [fileState, setFileState] = useState("idle");
   const [importError, setImportError] = useState("");
   const [importedCount, setImportedCount] = useState(0);
@@ -998,6 +1001,7 @@ export function Onboarding({
   const next = async () => {
     if (step === 1) {
       setOnboardingTouched(true);
+      setUsernameError("");
 
       const isAirlineValid = airline.trim() !== "";
       const isBaseValid = base.trim().length === 3;
@@ -1005,6 +1009,21 @@ export function Onboarding({
 
       if (!isAirlineValid || !isBaseValid || !isUsernameValid) {
         return;
+      }
+
+      setCheckingUsername(true);
+      try {
+        const available = await isUsernameAvailable(username);
+        if (!available) {
+          setUsernameError("Ese nombre de usuario ya estÃ¡ en uso.");
+          return;
+        }
+      } catch (error) {
+        console.error("No se pudo comprobar el nombre de usuario", error);
+        setUsernameError("No se pudo comprobar el nombre. IntÃ©ntalo de nuevo.");
+        return;
+      } finally {
+        setCheckingUsername(false);
       }
     }
 
@@ -1109,14 +1128,17 @@ export function Onboarding({
                   icon={UserRound}
                   value={username}
                   onChange={(e) =>
-                    setUsername(e.target.value.replace(/\s/g, "").toLowerCase())
+                    (() => {
+                      setUsernameError("");
+                      setUsername(e.target.value.replace(/\s/g, "").toLowerCase());
+                    })()
                   }
                   placeholder="ej. pedro"
                   hint="Será visible para tus amistades"
                   error={
                     onboardingTouched && !username.trim()
                       ? "Introduce un nombre de usuario"
-                      : ""
+                      : usernameError
                   }
                 />
               </div>
@@ -1192,6 +1214,7 @@ export function Onboarding({
                     : fileRef.current?.click()
                 }
                 disabled={
+                  checkingUsername ||
                   fileState === "loading" ||
                   (importConfig.method === "webcal" && !webcalUrl.trim())
                 }
@@ -1357,7 +1380,11 @@ export function Onboarding({
                   (importConfig.method === "webcal" && !webcalUrl.trim())))
             }
           >
-            {step === 3 ? "Ver mi calendario" : "Continuar"}
+            {checkingUsername
+              ? "Comprobando…"
+              : step === 3
+                ? "Ver mi calendario"
+                : "Continuar"}
             <ArrowRight size={17} />
           </Button>
         </div>

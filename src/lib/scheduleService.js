@@ -1,5 +1,14 @@
 import { supabase } from "./supabaseClient";
 
+export async function isUsernameAvailable(username) {
+  const normalized = String(username || "").trim().toLowerCase();
+  const { data, error } = await supabase.rpc("is_username_available", {
+    candidate_username: normalized,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
 export async function saveProfile(userId, profile) {
   const username = String(profile.username || "").trim().toLowerCase();
   if (!/^[a-z0-9_-]{3,30}$/.test(username)) {
