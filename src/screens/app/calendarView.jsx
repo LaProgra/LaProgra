@@ -571,18 +571,22 @@ export function CalendarView({
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex flex-wrap gap-2">
-                  <div
-                    className={`inline-flex rounded-lg px-2 py-1 text-xs font-bold ${theme === "dark" ? activityStyles[selected.type].dark : activityStyles[selected.type].light}`}
-                  >
-                    {selected.flightNumber || selected.label}
-                  </div>
+                  {!selected.flightNumber?.includes("TAXI") && (
+                    <div
+                      className={`inline-flex rounded-lg px-2 py-1 text-xs font-bold ${theme === "dark" ? activityStyles[selected.type].dark : activityStyles[selected.type].light}`}
+                    >
+                      {selected.flightNumber || selected.label}
+                    </div>
+                  )}
                   {selected.situated && (
                     <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
                       Situado
                     </div>
                     
                   )}
-                  {selected.situated && selectedAirlineName && (
+                  {selected.situated &&
+                    selectedAirlineName &&
+                    !selected.flightNumber?.includes("TAXI") && (
                     <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
                       {selectedAirlineName}
                     </div>
