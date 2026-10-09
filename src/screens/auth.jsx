@@ -1015,7 +1015,7 @@ export function Onboarding({
       try {
         const available = await isUsernameAvailable(username);
         if (!available) {
-          setUsernameError("Ese nombre de usuario ya estÃ¡ en uso.");
+          setUsernameError("Ese nombre de usuario ya está en uso.");
           return;
         }
       } catch (error) {

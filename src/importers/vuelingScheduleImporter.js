@@ -20,6 +20,7 @@ const MONTHS = [
   'Dec',
 ];
 const TIME = /^[SA]?(\d{2}):(\d{2})$/;
+const SIMULATOR_TIME = /^[BD](\d{2}:\d{2})$/;
 const FLIGHT = /^\d{3,4}$/;
 const AIRPORT = /^\*?[A-Z]{3,4}$/;
 const AIRCRAFT = /^\(([^)]+)\)$/;
@@ -31,7 +32,7 @@ const minutes = (s) => {
   return m ? +m[1] * 60 + +m[2] : null;
 };
 
-const stripTimePrefix = (v) => v.replace(/^[SA]/, '');
+const stripTimePrefix = (v) => v.replace(/^[SABD]/, '');
 const timeKind = (v) =>
   v.startsWith('S') ? 'scheduled' : v.startsWith('A') ? 'actual' : 'plain';
 function mergeSemanticTokens(tokens) {
@@ -326,9 +327,21 @@ function parseFlight(tokens, allowPartial = false) {
 }
 function parseOther(tokens) {
   if (!tokens.length) return null;
-  const times = tokens.slice(1).filter((t) => TIME.test(t)),
-    startTime = times[0] ? stripTimePrefix(times[0]) : undefined,
-    endTime = times[1] ? stripTimePrefix(times[1]) : undefined,
+  const values = tokens.slice(1),
+    simulatorTimes = values.filter((t) => SIMULATOR_TIME.test(t)),
+    isSimulator = simulatorTimes.some((t) => t.startsWith('B')) &&
+      simulatorTimes.some((t) => t.startsWith('D')),
+    times = values.filter((t) => TIME.test(t) || SIMULATOR_TIME.test(t)),
+    startTime = isSimulator
+      ? simulatorTimes.find((t) => t.startsWith('B')).slice(1)
+      : times[0]
+        ? stripTimePrefix(times[0])
+        : undefined,
+    endTime = isSimulator
+      ? times.at(-1).replace(/^[SABD]/, '')
+      : times[1]
+        ? stripTimePrefix(times[1])
+        : undefined,
     a = startTime ? minutes(startTime) : null,
     b = endTime ? minutes(endTime) : null;
   return {
@@ -337,7 +350,7 @@ function parseOther(tokens) {
     startTime,
     endTime,
     endDayOffset: a != null && b != null && b < a ? 1 : 0,
-    details: tokens.slice(1).filter((t) => !TIME.test(t)),
+    details: values.filter((t) => !TIME.test(t) && !SIMULATOR_TIME.test(t)),
   };
 }
 function parseEvent(items, box) {
@@ -494,7 +507,7 @@ function classifyOther(code) {
   const value = code.toUpperCase();
   if (/^(?:OFF|AOFF|SROF|XSOF|NROF|ZPER|FR|VAC|PAT)/.test(value)) return 'rest';
   if (/(?:SBY|RES|RVA|IMAG)/.test(value)) return 'reserve';
-  if (/^(?:LM|TRN|SIM|LPC|OPC|REU|VICC)/.test(value)) return 'training';
+  if (/^(?:LM|TRN|SIM|LPC|OPC|REU|VICC|EVAL|SBT)/.test(value)) return 'training';
   return 'duty';
 }
 
