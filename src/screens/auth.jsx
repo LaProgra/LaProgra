@@ -893,7 +893,6 @@ export function Onboarding({
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState("");
   const [checkingUsername, setCheckingUsername] = useState(false);
-  const [savingOnboarding, setSavingOnboarding] = useState(false);
   const [onboardingTouched, setOnboardingTouched] = useState(false);
   const [fileState, setFileState] = useState("idle");
   const [importError, setImportError] = useState("");
@@ -998,104 +997,61 @@ export function Onboarding({
     window.location.reload();
   };
 
-  const checkUsernameAvailability = async () => {
-    const normalizedUsername = username.trim().toLowerCase();
+  const next = async () => {
+    if (step === 1) {
+      setOnboardingTouched(true);
 
-    if (!normalizedUsername) {
-      setUsernameError("Introduce un nombre de usuario");
-      return false;
-    }
+      const isAirlineValid = airline.trim() !== "";
+      const isBaseValid = base.trim().length === 3;
+      const isUsernameValid = username.trim() !== "";
 
-    setCheckingUsername(true);
-    setUsernameError("");
+      if (!isAirlineValid || !isBaseValid || !isUsernameValid) {
+        return;
+      }
 
-    try {
+      setCheckingUsername(true);
+      setUsernameError("");
+
+      const normalizedUsername = username.trim().toLowerCase();
       const { data, error } = await supabase
         .from("profiles")
         .select("username")
         .eq("username", normalizedUsername)
         .limit(1);
 
+      setCheckingUsername(false);
+
       if (error) {
         console.error("No se pudo comprobar el nombre de usuario", error);
-        setUsernameError(
-          "No se pudo comprobar el nombre de usuario. IntÃ©ntalo de nuevo.",
-        );
-        return false;
+        setUsernameError("No se pudo comprobar el nombre de usuario");
+        return;
       }
 
       if (data?.length) {
-        setUsernameError("Ese nombre de usuario ya estÃ¡ en uso");
-        return false;
-      }
-
-      return true;
-    } finally {
-      setCheckingUsername(false);
-    }
-  };
-
-  const next = async () => {
-    if (checkingUsername || savingOnboarding) return;
-
-    if (step === 1) {
-      setOnboardingTouched(true);
-      const isAirlineValid = airline.trim() !== "";
-      const isBaseValid = base.trim().length === 3;
-      const isUsernameValid = username.trim() !== "";
-      if (!isAirlineValid || !isBaseValid || !isUsernameValid) {
-        return;
-      }
-
-      const isUsernameAvailable = await checkUsernameAvailability();
-      if (!isUsernameAvailable) {
+        setUsernameError("Ya existe el nombre de usuario");
         return;
       }
     }
+
     if (step < 3) {
-      setStep((currentStep) => currentStep + 1);
+      setStep(step + 1);
       return;
     }
-
     const profileData = {
       airline,
       base,
       baseCity: getAirportCity(base),
-      username: username.trim().toLowerCase(),
+      username: username.trim(),
       displayTimeZone: "base",
     };
-
-    setSavingOnboarding(true);
-    setUsernameError("");
-
-    try {
-      if (userId) {
-        await saveProfile(userId, profileData);
-        if (parsedSchedule && !scheduleSavedByServer) {
-          await saveScheduleEvents(userId, parsedSchedule);
-        }
+    setProfile(profileData);
+    if (userId) {
+      await saveProfile(userId, profileData);
+      if (parsedSchedule && !scheduleSavedByServer) {
+        await saveScheduleEvents(userId, parsedSchedule);
       }
-
-      setProfile(profileData);
-      onFinish();
-    } catch (error) {
-      console.error("No se pudo completar el onboarding", error);
-
-      if (error?.code === "23505") {
-        setStep(1);
-        setOnboardingTouched(true);
-        setUsernameError("Ese nombre de usuario ya estÃ¡ en uso. Elige otro.");
-        return;
-      }
-
-      setImportError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo guardar tu perfil. IntÃ©ntalo de nuevo.",
-      );
-    } finally {
-      setSavingOnboarding(false);
     }
+    onFinish();
   };
   return (
     <div className="min-h-screen bg-[#F5F6F8] text-slate-950 dark:bg-[#090B10] dark:text-white">
@@ -1178,18 +1134,15 @@ export function Onboarding({
                   icon={UserRound}
                   value={username}
                   onChange={(e) => {
-                    setUsername(
-                      e.target.value.replace(/\s/g, "").toLowerCase(),
-                    );
+                    setUsername(e.target.value.replace(/\s/g, "").toLowerCase());
                     setUsernameError("");
                   }}
                   placeholder="ej. pedro"
                   hint="SerÃ¡ visible para tus amistades"
                   error={
-                    usernameError ||
-                    (onboardingTouched && !username.trim()
+                    onboardingTouched && !username.trim()
                       ? "Introduce un nombre de usuario"
-                      : "")
+                      : usernameError
                   }
                 />
               </div>
@@ -1404,11 +1357,7 @@ export function Onboarding({
         </AnimatePresence>
         <div className="mt-9 flex items-center justify-between">
           {step > 1 ? (
-            <Button
-              variant="ghost"
-              onClick={() => setStep(step - 1)}
-              disabled={checkingUsername || savingOnboarding}
-            >
+            <Button variant="ghost" onClick={() => setStep(step - 1)}>
               <ArrowLeft size={17} />
               AtrÃ¡s
             </Button>
@@ -1425,10 +1374,9 @@ export function Onboarding({
           <Button
             onClick={next}
             disabled={
-              checkingUsername ||
-              savingOnboarding ||
               (step === 1 &&
-                (!airline.trim() ||
+                (checkingUsername ||
+                  !airline.trim() ||
                   base.trim().length !== 3 ||
                   !username.trim())) ||
               (step === 2 &&
@@ -1436,13 +1384,7 @@ export function Onboarding({
                   (importConfig.method === "webcal" && !webcalUrl.trim())))
             }
           >
-            {checkingUsername
-              ? "Comprobandoâ€¦"
-              : savingOnboarding
-                ? "Guardandoâ€¦"
-                : step === 3
-                  ? "Ver mi calendario"
-                  : "Continuar"}
+            {step === 3 ? "Ver mi calendario" : "Continuar"}
             <ArrowRight size={17} />
           </Button>
         </div>
