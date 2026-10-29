@@ -37,7 +37,7 @@ export function TimeZoneSelector({
         }}
         className="mt-1 w-full bg-transparent text-xs text-slate-500 outline-none dark:text-slate-400"
       >
-        <option value="base">{baseIata || "Base"} · LT</option>
+        <option value="base">{baseIata || "Base"}</option>
         <option value="UTC">UTC</option>
         <option value="custom">Otro…</option>
       </select>
