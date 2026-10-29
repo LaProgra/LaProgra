@@ -86,6 +86,9 @@ const airlineNameByIata = new Map(
 
 function getAirlineNameFromFlightNumber(flightNumber) {
   const prefix = (flightNumber || "").trim().slice(0, 2).toUpperCase();
+  // En las programaciones de Iberia, VSxxx identifica un evento situado.
+  // No debemos presentar el código como un vuelo operado por Virgin Atlantic.
+  if (prefix === "VS") return "";
   return airlineNameByIata.get(prefix) || "";
 }
 
