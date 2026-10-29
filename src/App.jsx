@@ -22,12 +22,17 @@ import { getDisplayTimeZone } from "./lib/timeZone";
 import { PublicCalendar } from "./screens/publicCalendar";
 
 export default function App() {
-  const publicUsername = typeof window !== "undefined" && window.location.pathname.match(/^\/([^/]+)\/?$/)?.[1];
-  if (publicUsername && publicUsername !== "login") return <PublicCalendar username={decodeURIComponent(publicUsername)} />;
+  const publicUsername =
+    typeof window !== "undefined" &&
+    window.location.pathname.match(/^\/user\/([^/]+)\/?$/)?.[1];
+  if (publicUsername)
+    return <PublicCalendar username={decodeURIComponent(publicUsername)} />;
   const [session, setSession] = useState(null);
   const [screen, setScreen] = useState("loading");
-  const [passwordRecovery, setPasswordRecovery] = useState(() =>
-    typeof window !== "undefined" && window.location.hash.includes("type=recovery"),
+  const [passwordRecovery, setPasswordRecovery] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.location.hash.includes("type=recovery"),
   );
   const [theme, setTheme] = useState("light");
   const [profile, setProfile] = useState({
@@ -58,7 +63,8 @@ export default function App() {
       baseCity: profileRow.base_city,
       username: profileRow.username,
       displayTimeZone: profileRow.display_time_zone || "base",
-      includeManualEventsInPdf: profileRow.include_manual_events_in_pdf !== false,
+      includeManualEventsInPdf:
+        profileRow.include_manual_events_in_pdf !== false,
       publicCalendarEnabled: profileRow.public_calendar_enabled === true,
       publicCalendarPinHash: profileRow.public_calendar_pin_hash || "",
       showRestDayEvents: profileRow.show_rest_day_events === true,
@@ -108,7 +114,14 @@ export default function App() {
   const logout = () => supabase.auth.signOut();
   const deleteAccount = async () => {
     await deleteAccountService();
-    setProfile({ airline: "Iberia", base: "MAD", baseCity: getAirportCity("MAD"), username: "pedro", displayTimeZone: "base", includeManualEventsInPdf: true });
+    setProfile({
+      airline: "Iberia",
+      base: "MAD",
+      baseCity: getAirportCity("MAD"),
+      username: "pedro",
+      displayTimeZone: "base",
+      includeManualEventsInPdf: true,
+    });
     setSchedule({});
     await supabase.auth.signOut();
   };
@@ -264,7 +277,9 @@ export default function App() {
                 showSlabTimes={showSlabTimes}
                 showRestDayEvents={showRestDayEvents}
                 timeZone={displayTimeZone}
-                includeManualEventsInPdf={profile.includeManualEventsInPdf !== false}
+                includeManualEventsInPdf={
+                  profile.includeManualEventsInPdf !== false
+                }
                 onToggleSlabTimes={() =>
                   setShowSlabTimes((showTimes) => !showTimes)
                 }
@@ -292,11 +307,18 @@ export default function App() {
                 onTimeZoneChange={updateDisplayTimeZone}
                 showRestDayEvents={showRestDayEvents}
                 onToggleShowRestDayEvents={updateShowRestDayEvents}
-                includeManualEventsInPdf={profile.includeManualEventsInPdf !== false}
+                includeManualEventsInPdf={
+                  profile.includeManualEventsInPdf !== false
+                }
                 onToggleIncludeManualEventsInPdf={(value) => {
-                  const nextProfile = { ...profile, includeManualEventsInPdf: value };
+                  const nextProfile = {
+                    ...profile,
+                    includeManualEventsInPdf: value,
+                  };
                   setProfile(nextProfile);
-                  return session?.user?.id ? saveProfile(session.user.id, nextProfile) : undefined;
+                  return session?.user?.id
+                    ? saveProfile(session.user.id, nextProfile)
+                    : undefined;
                 }}
                 onDeleteAccount={deleteAccount}
                 onLogout={logout}

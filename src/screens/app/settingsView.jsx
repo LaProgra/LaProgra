@@ -330,12 +330,12 @@ export function SettingsView({
           )}
           {profile.publicCalendarEnabled && profile.publicCalendarPinHash && (
             <a
-              href={`${window.location.origin}/${profile.username}`}
+              href={`${window.location.origin}/user/${profile.username}`}
               target="_blank"
               rel="noopener noreferrer"
               className="block break-all text-xs text-blue-600 underline hover:text-blue-700"
             >
-              {window.location.origin}/{profile.username}
+              {window.location.origin}/user/{profile.username}
             </a>
           )}
           {publicError && <p className="text-sm text-red-600">{publicError}</p>}
