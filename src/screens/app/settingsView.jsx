@@ -324,6 +324,11 @@ export function SettingsView({
               </Button>
             )}
           {profile.publicCalendarEnabled && profile.publicCalendarPinHash && (
+            <p className="text-sm text-slate-500">
+              Comparte el calendario mediante este enlace.
+            </p>
+          )}
+          {profile.publicCalendarEnabled && profile.publicCalendarPinHash && (
             <a
               href={`${window.location.origin}/${profile.username}`}
               target="_blank"
@@ -332,11 +337,6 @@ export function SettingsView({
             >
               {window.location.origin}/{profile.username}
             </a>
-          )}
-          {profile.publicCalendarEnabled && profile.publicCalendarPinHash && (
-            <p className="break-all text-xs text-blue-600">
-              {window.location.origin}/{profile.username}
-            </p>
           )}
           {publicError && <p className="text-sm text-red-600">{publicError}</p>}
         </div>
