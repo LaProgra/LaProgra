@@ -126,7 +126,10 @@ export function SettingsView({
               </Button>
               <Button
                 onClick={save}
-                disabled={!/^[a-z0-9_-]{3,30}$/.test(username.trim()) || base.length !== 3}
+                disabled={
+                  !/^[a-z0-9_-]{3,30}$/.test(username.trim()) ||
+                  base.length !== 3
+                }
               >
                 Guardar
               </Button>
@@ -203,26 +206,138 @@ export function SettingsView({
           </button>
         </div>
         <div className="flex items-center gap-4 border-t border-black/[.06] p-5 dark:border-white/[.07]">
-          <div className="flex-1"><p className="text-sm font-semibold">Incluir eventos manuales en el PDF</p></div>
-          <button type="button" role="switch" aria-checked={includeManualEventsInPdf} onClick={() => onToggleIncludeManualEventsInPdf(!includeManualEventsInPdf)} className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 ${includeManualEventsInPdf ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}>
-            <span className={`grid h-6 w-6 place-items-center rounded-full bg-white shadow transition-transform ${includeManualEventsInPdf ? "translate-x-5" : ""}`}><Check size={13} className={includeManualEventsInPdf ? "text-blue-600" : "opacity-0"} /></span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold">
+              Incluir eventos manuales en el PDF
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={includeManualEventsInPdf}
+            onClick={() =>
+              onToggleIncludeManualEventsInPdf(!includeManualEventsInPdf)
+            }
+            className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 ${includeManualEventsInPdf ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}
+          >
+            <span
+              className={`grid h-6 w-6 place-items-center rounded-full bg-white shadow transition-transform ${includeManualEventsInPdf ? "translate-x-5" : ""}`}
+            >
+              <Check
+                size={13}
+                className={
+                  includeManualEventsInPdf ? "text-blue-600" : "opacity-0"
+                }
+              />
+            </span>
           </button>
         </div>
       </section>
-      <h2 className="mb-2 mt-7 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Compartir</h2>
+      <h2 className="mb-2 mt-7 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Compartir
+      </h2>
       <section className="overflow-hidden rounded-[20px] border border-black/[.06] bg-white dark:border-white/[.07] dark:bg-[#14171A]">
         <div className="space-y-3 p-5">
-          <label className="flex items-center justify-between gap-4 text-sm font-semibold">Activar enlace
-            <button type="button" role="switch" aria-checked={profile.publicCalendarEnabled === true} onClick={async () => { const enabled = profile.publicCalendarEnabled !== true; const next = { ...profile, publicCalendarEnabled: enabled }; try { await saveProfile(userId, next); setProfile(next); setPublicError(""); } catch (error) { setPublicError(error.message); } }} className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${profile.publicCalendarEnabled ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}><span className={`grid h-6 w-6 place-items-center rounded-full bg-white shadow transition-transform ${profile.publicCalendarEnabled ? "translate-x-5" : "translate-x-0"}`}><Check size={13} className={profile.publicCalendarEnabled ? "text-blue-600" : "opacity-0"} /></span></button>
+          <label className="flex items-center justify-between gap-4 text-sm font-semibold">
+            Activar enlace
+            <button
+              type="button"
+              role="switch"
+              aria-checked={profile.publicCalendarEnabled === true}
+              onClick={async () => {
+                const enabled = profile.publicCalendarEnabled !== true;
+                const next = { ...profile, publicCalendarEnabled: enabled };
+                try {
+                  await saveProfile(userId, next);
+                  setProfile(next);
+                  setPublicError("");
+                } catch (error) {
+                  setPublicError(error.message);
+                }
+              }}
+              className={`flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${profile.publicCalendarEnabled ? "bg-blue-600" : "bg-slate-200 dark:bg-white/10"}`}
+            >
+              <span
+                className={`grid h-6 w-6 place-items-center rounded-full bg-white shadow transition-transform ${profile.publicCalendarEnabled ? "translate-x-5" : "translate-x-0"}`}
+              >
+                <Check
+                  size={13}
+                  className={
+                    profile.publicCalendarEnabled
+                      ? "text-blue-600"
+                      : "opacity-0"
+                  }
+                />
+              </span>
+            </button>
           </label>
-          {profile.publicCalendarEnabled && !profile.publicCalendarPinHash && <p className="text-sm text-slate-500">Crea un PIN de acceso a tu calendario público</p>}
-          {profile.publicCalendarEnabled && (!profile.publicCalendarPinHash || editingPublicPin) && <div className="flex gap-2">
-            <input inputMode="numeric" maxLength={4} value={publicPin} onChange={(event) => setPublicPin(event.target.value.replace(/\D/g, ""))} placeholder={profile.publicCalendarPinHash ? "Cambiar PIN" : "PIN de 4 dígitos"} className="min-h-11 flex-1 rounded-[12px] border border-black/10 bg-transparent px-3 dark:border-white/10" />
-            <Button disabled={publicPin.length !== 4} onClick={async () => { try { const next = { ...profile, publicCalendarPinHash: await hashPublicPin(publicPin), publicCalendarEnabled: true }; await saveProfile(userId, next); setProfile(next); setPublicPin(""); setEditingPublicPin(false); setPublicError(""); } catch (error) { setPublicError(error.message); } }}>Guardar PIN</Button>
-          </div>}
-          {profile.publicCalendarEnabled && profile.publicCalendarPinHash && !editingPublicPin && <Button variant="ghost" onClick={() => setEditingPublicPin(true)}>Cambiar PIN</Button>}
-          {profile.publicCalendarEnabled && profile.publicCalendarPinHash && <p className="text-sm text-slate-500">Comparte el calendario mediante este enlace.</p>}
-          {profile.publicCalendarEnabled && profile.publicCalendarPinHash && <p className="break-all text-xs text-blue-600">{window.location.origin}/{profile.username}</p>}
+          {profile.publicCalendarEnabled && !profile.publicCalendarPinHash && (
+            <p className="text-sm text-slate-500">
+              Crea un PIN de acceso a tu calendario público
+            </p>
+          )}
+          {profile.publicCalendarEnabled &&
+            (!profile.publicCalendarPinHash || editingPublicPin) && (
+              <div className="flex gap-2">
+                <input
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={publicPin}
+                  onChange={(event) =>
+                    setPublicPin(event.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder={
+                    profile.publicCalendarPinHash
+                      ? "Cambiar PIN"
+                      : "PIN de 4 dígitos"
+                  }
+                  className="min-h-11 flex-1 rounded-[12px] border border-black/10 bg-transparent px-3 dark:border-white/10"
+                />
+                <Button
+                  disabled={publicPin.length !== 4}
+                  onClick={async () => {
+                    try {
+                      const next = {
+                        ...profile,
+                        publicCalendarPinHash: await hashPublicPin(publicPin),
+                        publicCalendarEnabled: true,
+                      };
+                      await saveProfile(userId, next);
+                      setProfile(next);
+                      setPublicPin("");
+                      setEditingPublicPin(false);
+                      setPublicError("");
+                    } catch (error) {
+                      setPublicError(error.message);
+                    }
+                  }}
+                >
+                  Guardar PIN
+                </Button>
+              </div>
+            )}
+          {profile.publicCalendarEnabled &&
+            profile.publicCalendarPinHash &&
+            !editingPublicPin && (
+              <Button variant="ghost" onClick={() => setEditingPublicPin(true)}>
+                Cambiar PIN
+              </Button>
+            )}
+          {profile.publicCalendarEnabled && profile.publicCalendarPinHash && (
+            <a
+              href={`${window.location.origin}/${profile.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block break-all text-xs text-blue-600 underline hover:text-blue-700"
+            >
+              {window.location.origin}/{profile.username}
+            </a>
+          )}
+          {profile.publicCalendarEnabled && profile.publicCalendarPinHash && (
+            <p className="break-all text-xs text-blue-600">
+              {window.location.origin}/{profile.username}
+            </p>
+          )}
           {publicError && <p className="text-sm text-red-600">{publicError}</p>}
         </div>
       </section>
@@ -262,7 +377,10 @@ export function SettingsView({
               ¿Estás seguro de eliminar tu cuenta en LaProgra?
             </h2>
             {deleteError && (
-              <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+              <p
+                role="alert"
+                className="mt-3 text-sm text-red-600 dark:text-red-400"
+              >
                 {deleteError}
               </p>
             )}
@@ -284,7 +402,9 @@ export function SettingsView({
                     await onDeleteAccount();
                     setDeleteConfirmation(false);
                   } catch (error) {
-                    setDeleteError(error.message || "No se ha podido eliminar la cuenta.");
+                    setDeleteError(
+                      error.message || "No se ha podido eliminar la cuenta.",
+                    );
                   } finally {
                     setDeleting(false);
                   }
