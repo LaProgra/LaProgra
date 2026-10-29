@@ -63,7 +63,7 @@ export function downloadCalendarPdf({
   const pageHeight = 210;
   const margin = 9;
   const titleY = 13;
-  const gridTop = 25;
+  const gridTop = 16;
   const footerHeight = 20;
   const headerHeight = 7;
   const gridHeight = pageHeight - gridTop - footerHeight - 4;
@@ -79,8 +79,8 @@ export function downloadCalendarPdf({
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  pdf.text(`${monthLabel} - ${username || "usuario"}`, margin, titleY);
+  pdf.setFontSize(15);
+  pdf.text(`${username || "usuario"} - ${monthLabel}`, margin, titleY);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(7);
   pdf.text(timeZone || "UTC", pageWidth - margin, titleY, { align: "right" });
@@ -93,7 +93,7 @@ export function downloadCalendarPdf({
     const x = margin + index * cellWidth;
     pdf.line(x, gridTop, x, gridTop + gridHeight);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(7);
+    pdf.setFontSize(10);
     pdf.text(day, x + cellWidth / 2, gridTop + 4.8, { align: "center" });
   });
   pdf.line(
@@ -119,13 +119,13 @@ export function downloadCalendarPdf({
       pdf.line(margin, y + cellHeight, pageWidth - margin, y + cellHeight);
     const events = eventList(date);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(6.5);
+    pdf.setFontSize(7.5);
     pdf.text(String(date.day), x + 2, y + 4.5);
     const lineHeight = 3.25;
     const maxLines = Math.max(0, Math.floor((cellHeight - 7) / lineHeight));
     const shown = events.slice(0, maxLines);
     pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(5.6);
+    pdf.setFontSize(7);
     shown.forEach((event, eventIndex) => {
       const text = pdf.splitTextToSize(
         eventText(event, timeZone),
@@ -166,9 +166,9 @@ export function downloadCalendarPdf({
     const columns = Math.ceil(legend.length / legendRows);
     const legendWidth = pageWidth - margin * 2;
     const columnWidth = legendWidth / columns;
-    const rowHeight = 5.2;
+    const rowHeight = 7;
     pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(5.2);
+    pdf.setFontSize(7);
     legend.forEach((item, index) => {
       const column = Math.floor(index / legendRows);
       const row = index % legendRows;
