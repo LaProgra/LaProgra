@@ -1,4 +1,4 @@
-import { CalendarDays, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarDays, Settings, Users } from "lucide-react";
 import { LaPrograMark } from "../../components/shared";
 
 export function TimeZoneSelector({
@@ -69,6 +69,7 @@ export function AppNav({
 }) {
   const items = [
     ["calendar", CalendarDays, "Calendario"],
+    ["summary", BarChart3, "Resumen"],
     ["compare", Users, "Comparar"],
     ["settings", Settings, "Ajustes"],
   ];

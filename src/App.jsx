@@ -6,6 +6,7 @@ import {
   CalendarView,
   CompareView,
   SettingsView,
+  SummaryView,
 } from "./screens/appViews";
 import { supabase } from "./lib/supabaseClient";
 import {
@@ -319,6 +320,8 @@ export default function App() {
                   setShowSlabTimes((showTimes) => !showTimes)
                 }
                 onOpenSettings={() => setActive("settings")}
+                onOpenSummary={() => setActive("summary")}
+                onPeriodChange={setSchedulePeriod}
                 onLogout={logout}
                 onAddManualEvent={addManualEvent}
               />
@@ -326,6 +329,16 @@ export default function App() {
             {active === "compare" && (
               <CompareView onBack={() => setActive("calendar")} />
             )}{" "}
+            {active === "summary" && (
+              <SummaryView
+                schedule={schedule}
+                profile={profile}
+                schedulePeriod={schedulePeriod}
+                onPeriodChange={setSchedulePeriod}
+                timeZone={displayTimeZone}
+                theme={theme}
+              />
+            )}
             {active === "settings" && (
               <SettingsView
                 theme={theme}

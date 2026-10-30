@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  BarChart3,
   Download,
   LogOut,
   Pencil,
@@ -187,6 +188,8 @@ export function CalendarView({
   timeZone,
   onToggleSlabTimes,
   onOpenSettings,
+  onOpenSummary,
+  onPeriodChange,
   onLogout,
   onAddManualEvent,
   includeManualEventsInPdf = true,
@@ -208,18 +211,8 @@ export function CalendarView({
   const today = getDateInTimeZone(timeZone);
   const currentPeriod = { month: today.month, year: today.year };
   const schedulePeriod = schedule.period || currentPeriod;
-  const [visiblePeriod, setVisiblePeriod] = useState(currentPeriod);
-
   useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      return;
-    }
-    setVisiblePeriod(schedulePeriod);
-  }, [schedulePeriod.month, schedulePeriod.year]);
-
-  useEffect(() => {
-    if (view !== "mes" || visiblePeriod.month !== today.month || visiblePeriod.year !== today.year) return;
+    if (view !== "mes" || schedulePeriod.month !== today.month || schedulePeriod.year !== today.year) return;
     requestAnimationFrame(() => {
       const container = monthScrollRef.current;
       const todayElement = monthTodayRef.current;
@@ -228,7 +221,7 @@ export function CalendarView({
       const elementRect = todayElement.getBoundingClientRect();
       container.scrollTop += elementRect.top - containerRect.top;
     });
-  }, [view, visiblePeriod.month, visiblePeriod.year, today.day, today.month, today.year]);
+  }, [view, schedulePeriod.month, schedulePeriod.year, today.day, today.month, today.year]);
 
   useEffect(() => {
     if (view !== "agenda") return;
@@ -241,7 +234,7 @@ export function CalendarView({
     });
   }, [view]);
 
-  const monthDate = new Date(visiblePeriod.year, visiblePeriod.month - 1, 1);
+  const monthDate = new Date(schedulePeriod.year, schedulePeriod.month - 1, 1);
   const monthLabel = new Intl.DateTimeFormat("es-ES", {
     month: "long",
     year: "numeric",
@@ -254,34 +247,34 @@ export function CalendarView({
     .toUpperCase();
   const firstWeekday = (monthDate.getDay() + 6) % 7;
   const daysInMonth = new Date(
-    visiblePeriod.year,
-    visiblePeriod.month,
+    schedulePeriod.year,
+    schedulePeriod.month,
     0,
   ).getDate();
   const gridLength = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
   const monthDays = Array.from({ length: gridLength }, (_, index) => {
     const gridDate = new Date(
-      visiblePeriod.year,
-      visiblePeriod.month - 1,
+      schedulePeriod.year,
+      schedulePeriod.month - 1,
       index - firstWeekday + 1,
     );
     return {
       day: gridDate.getDate(),
       month: gridDate.getMonth() + 1,
       year: gridDate.getFullYear(),
-      visibleMonth: visiblePeriod.month,
-      visibleYear: visiblePeriod.year,
+      visibleMonth: schedulePeriod.month,
+      visibleYear: schedulePeriod.year,
     };
   });
   const weekdays = ["L", "M", "X", "J", "V", "S", "D"];
   const fullWeekdays = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sáb", "Dom"];
   const moveMonth = (offset) => {
     const nextMonth = new Date(
-      visiblePeriod.year,
-      visiblePeriod.month - 1 + offset,
+      schedulePeriod.year,
+      schedulePeriod.month - 1 + offset,
       1,
     );
-    setVisiblePeriod({
+    onPeriodChange({
       month: nextMonth.getMonth() + 1,
       year: nextMonth.getFullYear(),
     });
@@ -332,7 +325,7 @@ export function CalendarView({
         if (!visible) return;
         const dateKey = visible.target.dataset.agendaDate;
         const [year, month] = dateKey.split("-").map(Number);
-        setVisiblePeriod((current) => current.year === year && current.month === month ? current : { year, month });
+        if (schedulePeriod.year !== year || schedulePeriod.month !== month) onPeriodChange({ year, month });
       },
       { rootMargin: "-118px 0px -65% 0px", threshold: 0 },
     );
@@ -341,8 +334,8 @@ export function CalendarView({
   }, [view, agendaDays.length, agendaScrollTargetKey]);
   const downloadVisibleCalendar = () => downloadCalendarPdf({
     username: profile?.username,
-    month: visiblePeriod.month,
-    year: visiblePeriod.year,
+    month: schedulePeriod.month,
+    year: schedulePeriod.year,
     timeZone,
     monthDays,
     eventsByVisibleDay,
@@ -396,6 +389,16 @@ export function CalendarView({
             </button>
             {profileMenu && (
               <div className="absolute right-0 top-11 z-30 min-w-44 overflow-hidden rounded-[14px] border border-black/[.08] bg-white p-1 shadow-lg dark:border-white/[.1] dark:bg-[#181B20]">
+                <button
+                  onClick={() => {
+                    setProfileMenu(false);
+                    onOpenSummary?.();
+                  }}
+                  className="flex min-h-10 w-full items-center rounded-[10px] px-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[.08]"
+                >
+                  <BarChart3 size={16} className="mr-2" />
+                  Resumen
+                </button>
                 <button
                   onClick={() => {
                     setProfileMenu(false);
