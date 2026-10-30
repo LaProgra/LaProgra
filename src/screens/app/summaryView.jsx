@@ -9,6 +9,7 @@ import {
   Timer,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 import {
   getDateInTimeZone,
@@ -35,10 +36,10 @@ function isProgrammedActivity(event) {
   const text = `${event.label || ""} ${event.desc || ""}`.toUpperCase();
   return Boolean(
     event.flightNumber ||
-      getRoute(event) ||
-      event.type === "training" ||
-      event.type === "reserve" ||
-      /\b(?:SIM|SIMULADOR|LPC|OPC|IMAG|IMAGINARIA)\b/.test(text),
+    getRoute(event) ||
+    event.type === "training" ||
+    event.type === "reserve" ||
+    /\b(?:SIM|SIMULADOR|LPC|OPC|IMAG|IMAGINARIA)\b/.test(text),
   );
 }
 
@@ -50,12 +51,10 @@ function calculateSummary(schedule, period, timeZone, baseIata) {
   });
   const daysInMonth = new Date(period.year, period.month, 0).getDate();
   const programmedDays = new Set(
-    events
-      .filter(isProgrammedActivity)
-      .map((event) => {
-        const date = getEventDisplayDate(event, timeZone);
-        return `${date.year}-${date.month}-${date.day}`;
-      }),
+    events.filter(isProgrammedActivity).map((event) => {
+      const date = getEventDisplayDate(event, timeZone);
+      return `${date.year}-${date.month}-${date.day}`;
+    }),
   );
   const timed = events.filter(
     (event) => event.startsAt && event.endsAt && event.type !== "rest",
@@ -97,7 +96,7 @@ function calculateSummary(schedule, period, timeZone, baseIata) {
     (event) =>
       event.startsAt &&
       getDateInTimeZone(timeZone, event.startsAt) &&
-      Number(formatEventTime(event.startsAt, timeZone).slice(0, 2)) < 6,
+      Number(formatEventTime(event.startsAt, timeZone).slice(0, 2)) < 7,
   ).length;
   const late = events.filter(
     (event) =>
@@ -143,6 +142,7 @@ export function SummaryView({
   timeZone,
   profile,
   onPeriodChange,
+  onBack,
 }) {
   const period = schedulePeriod || getDateInTimeZone(timeZone);
   const summary = calculateSummary(
@@ -159,6 +159,12 @@ export function SummaryView({
     return `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
   };
   const noData = !summary.events.length;
+  const baseIata = String(profile?.base || "").toUpperCase();
+  const destinationList = [...summary.destinationCounts.entries()]
+    .filter(([destination]) => destination !== baseIata)
+    .sort(
+      (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+    );
   const moveMonth = (offset) => {
     const next = new Date(period.year, period.month - 1 + offset, 1);
     onPeriodChange({ month: next.getMonth() + 1, year: next.getFullYear() });
@@ -166,6 +172,13 @@ export function SummaryView({
   return (
     <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-7 sm:px-6 lg:px-8 lg:pb-8">
       <header>
+        <button
+          onClick={onBack}
+          className="mb-6 grid h-10 w-10 place-items-center rounded-full text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]"
+          aria-label="Volver al calendario"
+        >
+          <ArrowLeft size={20} />
+        </button>
         <h1 className="text-3xl font-semibold tracking-[-0.04em]">Resumen</h1>
         <div className="mt-3 flex items-center gap-1">
           <button
@@ -202,43 +215,8 @@ export function SummaryView({
           <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Metric
               icon={Clock3}
-              label="Horas totales"
+              label="Horas"
               value={formatHours(summary.totalHours)}
-              detail="Horas bloque"
-            />
-            <Metric
-              icon={MapPin}
-              label="Destinos diferentes"
-              value={summary.destinations.size}
-              detail="Aeropuertos de llegada"
-            />
-            <Metric
-              icon={Route}
-              label="Ruta más volada"
-              value={summary.topRoute?.[0] || "—"}
-              detail={
-                summary.topRoute ? `${summary.topRoute[1]} veces` : "Sin rutas"
-              }
-            />
-            <Metric
-              icon={AlarmClock}
-              label="Madrugones"
-              value={summary.early}
-              detail="Inicio antes de las 06:00"
-            />
-          </section>
-          <section className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Metric
-              icon={Moon}
-              label="Llegadas tarde"
-              value={summary.late}
-              detail="Llegada desde las 23:00"
-            />
-            <Metric
-              icon={Plane}
-              label="Vuelos"
-              value={summary.flights.length}
-              detail={`${summary.routes.size} rutas distintas`}
             />
             <Metric
               icon={CalendarCheck2}
@@ -247,59 +225,67 @@ export function SummaryView({
               detail="Días del mes sin actividad programada"
             />
             <Metric
+              icon={Plane}
+              label="Vuelos"
+              value={summary.flights.length}
+              detail={`${summary.routes.size} rutas distintas`}
+            />
+          </section>
+          <section className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Metric
+              icon={AlarmClock}
+              label="Madrugones"
+              value={summary.early}
+              detail="Inicio antes de las 07:00"
+            />
+
+            <Metric
+              icon={Moon}
+              label="Llegadas tarde"
+              value={summary.late}
+              detail="Llegada después de las 23:00"
+            />
+
+            <Metric
               icon={Timer}
-              label="Jornada más larga"
+              label="Vuelo más largo"
               value={formatHours(summary.longest)}
               detail={`Media: ${formatHours(average)}`}
             />
           </section>
           <section className="mt-6 grid gap-4 lg:grid-cols-2">
             <div className="rounded-[20px] border border-black/[.06] bg-white p-5 dark:border-white/[.08] dark:bg-[#14171A]">
-              <h2 className="font-semibold">Destinos destacados</h2>
-              <div className="mt-4 space-y-3">
-                {[...summary.destinationCounts.entries()]
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 3)
-                  .map(([destination, count]) => (
-                    <div
-                      key={destination}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="font-semibold">{destination}</span>
-                      <span className="text-slate-500">
-                        {count} {count === 1 ? "llegada" : "llegadas"}
-                      </span>
-                    </div>
-                  ))}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Destinos</h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Sin contar tu base
+                  </p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500 dark:bg-white/[.08]">
+                  {destinationList.length} destinos
+                </span>
               </div>
-            </div>
-            <div className="rounded-[20px] border border-black/[.06] bg-white p-5 dark:border-white/[.08] dark:bg-[#14171A]">
-              <h2 className="font-semibold">Otros datos</h2>
-              <div className="mt-4 space-y-3 text-sm">
-                <p className="flex justify-between">
-                  <span className="text-slate-500">Servicios registrados</span>
-                  <strong>
-                    {
-                      summary.events.filter((event) => event.type !== "rest")
-                        .length
-                    }
-                  </strong>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-slate-500">
-                    Aeropuerto más visitado
-                  </span>
-                  <strong>{summary.topAirport?.[0] || "—"}</strong>
-                </p>
-                {summary.skippedBaseAirport && (
-                  <p className="text-xs text-slate-500">
-                    Se ha omitido {profile.base} porque es tu base.
+              <div className="mt-4 flex flex-wrap gap-2">
+                {destinationList.length ? (
+                  destinationList.map(([destination, count]) => (
+                    <span
+                      key={destination}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold ${count > 1 ? "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-100" : "border-black/[.06] bg-slate-50 text-slate-500 dark:border-white/[.08] dark:bg-white/[.05]"}`}
+                    >
+                      {destination}
+                      {count > 1 && (
+                        <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          ×{count}
+                        </span>
+                      )}
+                    </span>
+                  ))
+                ) : (
+                  <p className="py-3 text-sm text-slate-500">
+                    No hay destinos fuera de la base este mes.
                   </p>
                 )}
-                <p className="flex justify-between">
-                  <span className="text-slate-500">Eventos con horario</span>
-                  <strong>{summary.timed.length}</strong>
-                </p>
               </div>
             </div>
           </section>
