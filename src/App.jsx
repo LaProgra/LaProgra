@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getAirportCity, getAirportTimeZone } from "./importers";
 import { Login, Onboarding } from "./screens/auth";
 import {
@@ -29,6 +29,8 @@ export default function App() {
     return <PublicCalendar username={decodeURIComponent(publicUsername)} />;
   const [session, setSession] = useState(null);
   const [screen, setScreen] = useState("loading");
+  const [hydrationError, setHydrationError] = useState("");
+  const hydrationRequest = useRef(0);
   const [passwordRecovery, setPasswordRecovery] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -52,27 +54,53 @@ export default function App() {
   const [active, setActive] = useState("calendar");
 
   const hydrate = async (userId) => {
-    const profileRow = await loadProfile(userId);
-    if (!profileRow) {
-      setScreen("onboarding");
-      return;
+    const requestId = ++hydrationRequest.current;
+    setHydrationError("");
+    try {
+      const profileRow = await loadProfile(userId);
+      if (requestId !== hydrationRequest.current) return;
+      if (!profileRow) {
+        setScreen("onboarding");
+        return;
+      }
+      setProfile({
+        airline: profileRow.airline,
+        base: profileRow.base,
+        baseCity: profileRow.base_city,
+        username: profileRow.username,
+        displayTimeZone: profileRow.display_time_zone || "base",
+        includeManualEventsInPdf:
+          profileRow.include_manual_events_in_pdf !== false,
+        publicCalendarEnabled: profileRow.public_calendar_enabled === true,
+        publicCalendarPinHash: profileRow.public_calendar_pin_hash || "",
+        showRestDayEvents: profileRow.show_rest_day_events === true,
+      });
+      setShowRestDayEvents(profileRow.show_rest_day_events === true);
+      const { events } = await loadScheduleEvents(userId);
+      if (requestId !== hydrationRequest.current) return;
+      setSchedule(events);
+      setScreen("app");
+    } catch (error) {
+      if (requestId !== hydrationRequest.current) return;
+      const isFutureJwt =
+        error?.code === "PGRST303" ||
+        String(error?.message || "").toLowerCase().includes("jwt issued at future");
+      if (isFutureJwt) {
+        // The persisted access token was created in the future. Remove it locally
+        // so the next login obtains a token based on the current device time.
+        await supabase.auth.signOut({ scope: "local" });
+        setSession(null);
+        setPasswordRecovery(false);
+        setHydrationError(
+          "Tu sesión había caducado por un desfase de hora. Inicia sesión de nuevo.",
+        );
+      } else {
+        setHydrationError(
+          "No se han podido cargar tus datos. Comprueba tu conexión e inténtalo de nuevo.",
+        );
+      }
+      setScreen("login");
     }
-    setProfile({
-      airline: profileRow.airline,
-      base: profileRow.base,
-      baseCity: profileRow.base_city,
-      username: profileRow.username,
-      displayTimeZone: profileRow.display_time_zone || "base",
-      includeManualEventsInPdf:
-        profileRow.include_manual_events_in_pdf !== false,
-      publicCalendarEnabled: profileRow.public_calendar_enabled === true,
-      publicCalendarPinHash: profileRow.public_calendar_pin_hash || "",
-      showRestDayEvents: profileRow.show_rest_day_events === true,
-    });
-    setShowRestDayEvents(profileRow.show_rest_day_events === true);
-    const { events } = await loadScheduleEvents(userId);
-    setSchedule(events);
-    setScreen("app");
   };
 
   useEffect(() => {
@@ -93,7 +121,7 @@ export default function App() {
             setScreen("login");
             return;
           }
-          hydrate(newSession.user.id);
+          void hydrate(newSession.user.id);
         } else {
           recoveryDetected = false;
           setPasswordRecovery(false);
@@ -104,7 +132,7 @@ export default function App() {
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-      if (data.session && !recoveryDetected) hydrate(data.session.user.id);
+      if (data.session && !recoveryDetected) void hydrate(data.session.user.id);
       else if (recoveryDetected) setScreen("login");
       else setScreen("login");
     });
@@ -242,12 +270,19 @@ export default function App() {
         <div className="min-h-screen bg-[#F5F6F8] dark:bg-[#090B10]" />
       )}{" "}
       {screen === "login" && (
-        <Login
-          onContinue={() => {}}
-          initialMode={passwordRecovery ? "updatePassword" : "signIn"}
-          theme={theme}
-          setTheme={setTheme}
-        />
+        <>
+          {hydrationError && (
+            <div className="fixed inset-x-0 top-0 z-50 bg-amber-100 px-4 py-3 text-center text-sm text-amber-950">
+              {hydrationError}
+            </div>
+          )}
+          <Login
+            onContinue={() => {}}
+            initialMode={passwordRecovery ? "updatePassword" : "signIn"}
+            theme={theme}
+            setTheme={setTheme}
+          />
+        </>
       )}{" "}
       {screen === "onboarding" && (
         <Onboarding

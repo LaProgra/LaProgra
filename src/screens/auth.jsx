@@ -690,14 +690,16 @@ function VuelingImportHelp() {
   return (
     <>
       <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-        Descarga tu programación de Vueling en formato PDF y selecciona el archivo obtenido.
+        Descarga tu programación de Vueling en formato PDF y selecciona el
+        archivo obtenido.
       </p>
       <ol className="mt-5 space-y-4">
         <HelpStep number="1" title="Descarga tu programación">
           Obtén desde el sistema de Vueling el PDF mensual de tu programación.
         </HelpStep>
         <HelpStep number="2" title="Comprueba el archivo">
-          Asegúrate de que contiene los días y actividades del periodo que quieres importar.
+          Asegúrate de que contiene los días y actividades del periodo que
+          quieres importar.
         </HelpStep>
         <HelpStep number="3" title="Impórtalo en LaProgra">
           Cierra esta ventana y pulsa "selecciona o arrastra tu PDF".
@@ -716,7 +718,7 @@ function SwiftairImportHelp() {
       </p>
       <ol className="mt-5 space-y-4">
         <HelpStep number="1" title="Crea un calendario en Calendar">
-          Abre la app Calendar de Apple (o pincha {" "}
+          Abre la app Calendar de Apple (o pincha{" "}
           <a
             href="https://www.icloud.com/calendar/"
             target="_blank"
@@ -833,7 +835,13 @@ const IMPORT_CONFIG = {
   Iberia: {
     method: "csv",
     accept: ".csv,text/csv",
-    description: <>Selecciona el archivo CSV que hay en <strong>ibNet - Programación - Outlook</strong>. LaProgra interpretará los eventos de tu programación.</>,
+    description: (
+      <>
+        Selecciona el archivo CSV que hay en{" "}
+        <strong>ibNet - Programación - Outlook</strong>. LaProgra interpretará
+        los eventos de tu programación.
+      </>
+    ),
     idleTitle: "Selecciona o arrastra tu CSV",
     loadingTitle: "Procesando programación",
     loadingDescription: "Descartando datos no necesarios",
@@ -843,12 +851,18 @@ const IMPORT_CONFIG = {
     helpTitle: "Cómo descargar tu programación",
     idleSubtitle: "Archivo de programación de Iberia · Máx. 10 MB",
     replaceLabel: "Pulsa para sustituir el archivo",
-    privacy: <>La columna <strong>Description</strong> se descarta por completo durante la importación y no se conserva.</>,
+    privacy: (
+      <>
+        La columna <strong>Description</strong> se descarta por completo durante
+        la importación y no se conserva.
+      </>
+    ),
     help: IberiaImportHelp,
   },
   Swiftair: {
     method: "webcal",
-    description: "Pega el enlace webcal de Swiftair. LaProgra interpretará los eventos de tu programación.",
+    description:
+      "Pega el enlace webcal de Swiftair. LaProgra interpretará los eventos de tu programación.",
     inputLabel: "Enlace webcal",
     inputPlaceholder: "webcal://",
     inputHint: "Podrás cambiar el enlace en la configuración de LaProgra.",
@@ -859,13 +873,15 @@ const IMPORT_CONFIG = {
     helpTitle: "Cómo obtener tu enlace webcal",
     idleSubtitle: "Calendario de programación de Swiftair",
     replaceLabel: "Pulsa para actualizar desde el enlace",
-    privacy: "El enlace se guarda para mantener tu programación actualizada automáticamente.",
+    privacy:
+      "El enlace se guarda para mantener tu programación actualizada automáticamente.",
     help: SwiftairImportHelp,
   },
   Vueling: {
     method: "pdf",
     accept: ".pdf,application/pdf",
-    description: "Selecciona el PDF mensual de tu programación de Vueling. LaProgra interpretará sus eventos.",
+    description:
+      "Selecciona el PDF mensual de tu programación de Vueling. LaProgra interpretará sus eventos.",
     idleTitle: "Selecciona o arrastra tu PDF",
     loadingTitle: "Procesando programación",
     loadingDescription: "Descartando datos no necesarios",
@@ -875,7 +891,8 @@ const IMPORT_CONFIG = {
     helpTitle: "Cómo descargar tu PDF de programación",
     idleSubtitle: "PDF de programación de Vueling · Máx. 10 MB",
     replaceLabel: "Pulsa para sustituir el PDF",
-    privacy: "El PDF se procesa localmente y tu nº empleado/checkeo nunca llega a un servidor.",
+    privacy:
+      "El PDF se procesa localmente y tu nº empleado/checkeo nunca llega a un servidor.",
     help: VuelingImportHelp,
   },
 };
@@ -1020,7 +1037,9 @@ export function Onboarding({
         }
       } catch (error) {
         console.error("No se pudo comprobar el nombre de usuario", error);
-        setUsernameError("No se pudo comprobar el nombre. IntÃ©ntalo de nuevo.");
+        setUsernameError(
+          "No se pudo comprobar el nombre. IntÃ©ntalo de nuevo.",
+        );
         return;
       } finally {
         setCheckingUsername(false);
@@ -1095,7 +1114,7 @@ export function Onboarding({
                         setImportedCount(0);
                         setImportedPeriod(null);
                       }}
-                      className="min-h-12 w-full appearance-none rounded-[14px] border border-black/10 bg-white pl-11 pr-10 text-[15px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-white/10 dark:bg-white/[.045] dark:focus:ring-blue-950"
+                      className="min-h-12 w-full appearance-none rounded-[14px] border border-black/10 bg-white pl-11 pr-10 text-[15px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-white/10 dark:bg-[#1B1F23] dark:text-white dark:[color-scheme:dark] dark:focus:ring-blue-950"
                     >
                       <option value="" disabled>
                         Selecciona una aerolínea
@@ -1130,7 +1149,9 @@ export function Onboarding({
                   onChange={(e) =>
                     (() => {
                       setUsernameError("");
-                      setUsername(e.target.value.replace(/\s/g, "").toLowerCase());
+                      setUsername(
+                        e.target.value.replace(/\s/g, "").toLowerCase(),
+                      );
                     })()
                   }
                   placeholder="ej. pedro"
@@ -1247,12 +1268,8 @@ export function Onboarding({
                     <p className="mt-2 text-sm text-slate-500">
                       {importConfig.loadingDescription}
                     </p>
-                    <h2 className="hidden">
-                      Procesando programación…
-                    </h2>
-                    <p className="hidden">
-                      Descartando datos no necesarios
-                    </p>
+                    <h2 className="hidden">Procesando programación…</h2>
+                    <p className="hidden">Descartando datos no necesarios</p>
                   </>
                 )}
                 {fileState === "success" && (
@@ -1263,9 +1280,7 @@ export function Onboarding({
                     <h2 className="mt-5 text-lg font-semibold">
                       {importConfig.successTitle}
                     </h2>
-                    <h2 className="hidden">
-                      Programación preparada
-                    </h2>
+                    <h2 className="hidden">Programación preparada</h2>
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                       {importedCount}{" "}
                       {importedCount === 1
@@ -1286,9 +1301,9 @@ export function Onboarding({
                 <p className="hidden">
                   {false ? (
                     "El enlace se guarda para mantener tu programación actualizada automáticamente."
-                  )  : false ? (
-                  "Tus datos de nombre de checkeo y número de empleado nunca se importan. LaProgra los descarta antes de guardar tu programación en el servidor."
-                ) : (
+                  ) : false ? (
+                    "Tus datos de nombre de checkeo y número de empleado nunca se importan. LaProgra los descarta antes de guardar tu programación en el servidor."
+                  ) : (
                     <>
                       La columna{" "}
                       <strong className="text-slate-800 dark:text-slate-200">
