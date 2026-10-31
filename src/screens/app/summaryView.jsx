@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   AlarmClock,
   CalendarCheck2,
@@ -11,11 +12,22 @@ import {
   ChevronRight,
   ArrowLeft,
 } from "lucide-react";
+import { divIcon } from "leaflet";
+import {
+  MapContainer,
+  Marker,
+  TileLayer,
+  Tooltip,
+  ZoomControl,
+  useMap,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   getDateInTimeZone,
   getEventDisplayDate,
   formatEventTime,
 } from "../../lib/timeZone";
+import { getAirportCity, getAirportCoordinates } from "../../lib/airports";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -96,7 +108,7 @@ function calculateSummary(schedule, period, timeZone, baseIata) {
     (event) =>
       event.startsAt &&
       getDateInTimeZone(timeZone, event.startsAt) &&
-      Number(formatEventTime(event.startsAt, timeZone).slice(0, 2)) < 7,
+      Number(formatEventTime(event.startsAt, timeZone).slice(0, 2)) < 8,
   ).length;
   const late = events.filter(
     (event) =>
@@ -136,6 +148,86 @@ function Metric({ icon: Icon, label, value, detail }) {
   );
 }
 
+function MapViewport({ destinations }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!destinations.length) return;
+    if (destinations.length === 1) {
+      map.setView([destinations[0].latitude, destinations[0].longitude], 5, {
+        animate: false,
+      });
+      return;
+    }
+    map.fitBounds(
+      destinations.map(({ latitude, longitude }) => [latitude, longitude]),
+      { padding: [36, 36], maxZoom: 5, animate: false },
+    );
+  }, [destinations, map]);
+  return null;
+}
+
+function DestinationMap({ destinations }) {
+  if (!destinations.length)
+    return (
+      <div className="flex h-[300px] items-center justify-center rounded-[20px] border border-dashed border-black/[.1] bg-slate-50 text-center dark:border-white/[.12] dark:bg-white/[.03]">
+        <div>
+          <MapPin className="mx-auto text-slate-400" size={26} />
+          <p className="mt-2 text-sm font-semibold">
+            No hay destinos con coordenadas
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Los destinos seguirán apareciendo en la lista.
+          </p>
+        </div>
+      </div>
+    );
+  return (
+    <div className="overflow-hidden rounded-[20px] border border-black/[.06] bg-white shadow-sm dark:border-white/[.08] dark:bg-[#14171A]">
+      <div className="flex items-center justify-between px-5 pb-3 pt-5">
+        <div>
+          <h2 className="font-semibold">Mapa de destinos</h2>
+        </div>
+        <MapPin className="text-[#176BFF]" size={19} />
+      </div>
+      <MapContainer
+        center={[40, -3]}
+        zoom={3}
+        zoomControl={false}
+        scrollWheelZoom={false}
+        className="h-[300px] w-full sm:h-[360px]"
+      >
+        <ZoomControl position="bottomright" />
+        <TileLayer
+          attribution="&copy; OpenStreetMap"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <MapViewport destinations={destinations} />
+        {destinations.map((destination) => {
+          const repeated = destination.count > 1;
+          const marker = divIcon({
+            className: "destination-marker",
+            html: `<span class="destination-marker__pin ${repeated ? "destination-marker__pin--repeated" : ""}"><span>${destination.iata}</span>${repeated ? `<b>×${destination.count}</b>` : ""}</span>`,
+            iconSize: [42, 42],
+            iconAnchor: [21, 38],
+          });
+          return (
+            <Marker
+              key={destination.iata}
+              position={[destination.latitude, destination.longitude]}
+              icon={marker}
+            >
+              <Tooltip direction="top" offset={[0, -30]}>
+                {destination.iata} · {destination.city} · {destination.count}{" "}
+                {destination.count === 1 ? "vez" : "veces"}
+              </Tooltip>
+            </Marker>
+          );
+        })}
+      </MapContainer>
+    </div>
+  );
+}
+
 export function SummaryView({
   schedule,
   schedulePeriod,
@@ -164,6 +256,18 @@ export function SummaryView({
     .filter(([destination]) => destination !== baseIata)
     .sort(
       (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+    );
+  const mappedDestinations = destinationList
+    .map(([iata, count]) => ({
+      iata,
+      count,
+      city: getAirportCity(iata) || iata,
+      ...getAirportCoordinates(iata),
+    }))
+    .filter(
+      (destination) =>
+        Number.isFinite(destination.latitude) &&
+        Number.isFinite(destination.longitude),
     );
   const moveMonth = (offset) => {
     const next = new Date(period.year, period.month - 1 + offset, 1);
@@ -236,14 +340,14 @@ export function SummaryView({
               icon={AlarmClock}
               label="Madrugones"
               value={summary.early}
-              detail="Inicio antes de las 07:00"
+              detail="Antes de 08:00"
             />
 
             <Metric
               icon={Moon}
               label="Llegadas tarde"
               value={summary.late}
-              detail="Llegada después de las 23:00"
+              detail="Después de 23:00"
             />
 
             <Metric
@@ -253,42 +357,48 @@ export function SummaryView({
               detail={`Media: ${formatHours(average)}`}
             />
           </section>
-          <section className="mt-6 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[20px] border border-black/[.06] bg-white p-5 dark:border-white/[.08] dark:bg-[#14171A]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold">Destinos</h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Sin contar tu base
-                  </p>
-                </div>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500 dark:bg-white/[.08]">
-                  {destinationList.length} destinos
-                </span>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {destinationList.length ? (
-                  destinationList.map(([destination, count]) => (
-                    <span
-                      key={destination}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold ${count > 1 ? "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-100" : "border-black/[.06] bg-slate-50 text-slate-500 dark:border-white/[.08] dark:bg-white/[.05]"}`}
-                    >
-                      {destination}
-                      {count > 1 && (
-                        <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                          ×{count}
-                        </span>
-                      )}
-                    </span>
-                  ))
-                ) : (
-                  <p className="py-3 text-sm text-slate-500">
-                    No hay destinos fuera de la base este mes.
-                  </p>
-                )}
-              </div>
-            </div>
+          <section className="mt-6">
+            <DestinationMap destinations={mappedDestinations} />
           </section>
+          {/* Destination chips are represented directly by the map markers. */}
+          {false && (
+            <section className="mt-6 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-[20px] border border-black/[.06] bg-white p-5 dark:border-white/[.08] dark:bg-[#14171A]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold">Destinos</h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Sin contar tu base
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500 dark:bg-white/[.08]">
+                    {destinationList.length} destinos
+                  </span>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {destinationList.length ? (
+                    destinationList.map(([destination, count]) => (
+                      <span
+                        key={destination}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold ${count > 1 ? "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-100" : "border-black/[.06] bg-slate-50 text-slate-500 dark:border-white/[.08] dark:bg-white/[.05]"}`}
+                      >
+                        {destination}
+                        {count > 1 && (
+                          <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            ×{count}
+                          </span>
+                        )}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="py-3 text-sm text-slate-500">
+                      No hay destinos fuera de la base este mes.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
         </>
       )}
     </div>

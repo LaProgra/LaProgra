@@ -36,6 +36,7 @@ function parseCsvRows(text) {
 const airportRows = parseCsvRows(airportsCsv).slice(1);
 const airportCityByIata = new Map();
 const airportTimeZoneByIata = new Map();
+const airportCoordinatesByIata = new Map();
 
 airportRows.forEach((row) => {
   const iata = (row[0] || "").trim().toUpperCase();
@@ -43,8 +44,13 @@ airportRows.forEach((row) => {
 
   const city = (row[1] || "").trim();
   const timeZone = (row[2] || "").trim();
+  const latitude = Number(row[3]);
+  const longitude = Number(row[4]);
   if (city) airportCityByIata.set(iata, city);
   if (timeZone) airportTimeZoneByIata.set(iata, timeZone);
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    airportCoordinatesByIata.set(iata, { latitude, longitude });
+  }
 });
 
 export function getAirportCity(iata) {
@@ -53,4 +59,8 @@ export function getAirportCity(iata) {
 
 export function getAirportTimeZone(iata) {
   return airportTimeZoneByIata.get(iata.trim().toUpperCase()) || "";
+}
+
+export function getAirportCoordinates(iata) {
+  return airportCoordinatesByIata.get(iata.trim().toUpperCase()) || null;
 }

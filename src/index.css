@@ -28,3 +28,13 @@ body {
 .slab__day-indicator {
   font-size: clamp(5px, 7cqw, 7px);
 }
+ .destination-marker { background: transparent; border: 0; }
+.destination-marker__pin { position: relative; display: grid; place-items: center; width: 30px; height: 30px; border: 3px solid white; border-radius: 50% 50% 50% 0; background: #60a5fa; color: white; font-size: 8px; font-weight: 800; box-shadow: 0 4px 12px rgba(15, 23, 42, .25); transform: rotate(-45deg); }
+.destination-marker__pin span { transform: rotate(45deg); }
+.destination-marker__pin--repeated { background: #176bff; box-shadow: 0 5px 15px rgba(23, 107, 255, .4); }
+.destination-marker__pin b { position: absolute; right: -15px; top: -10px; min-width: 22px; border: 2px solid white; border-radius: 999px; background: #0f172a; padding: 2px 4px; color: white; font-size: 9px; line-height: 1.1; text-align: center; transform: rotate(45deg); }
+.leaflet-container { font: inherit; }
+.leaflet-control-zoom { border: 0 !important; border-radius: 10px !important; overflow: hidden; box-shadow: 0 4px 14px rgba(15, 23, 42, .14) !important; }
+.leaflet-control-zoom a { color: #334155 !important; }
+.dark .leaflet-tile { filter: brightness(.72) saturate(.75); }
+.dark .leaflet-control-zoom a { background: #181b20; color: #cbd5e1 !important; border-color: rgba(255,255,255,.1) !important; }
