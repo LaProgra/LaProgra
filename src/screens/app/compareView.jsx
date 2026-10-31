@@ -1,36 +1,21 @@
-import { ArrowLeft, Plus, Users } from "lucide-react";
-import { Button } from "../../components/shared";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Check, LoaderCircle, Plus, Search, Trash2, Users, X } from "lucide-react";
+import { Button, Input } from "../../components/shared";
+import { loadFriendships, removeFriend, respondToFriendRequest, searchProfiles, sendFriendRequest } from "../../lib/scheduleService";
+
+const empty = { friends: [], received: [], sent: [] };
+const initial = (user) => (user?.username || "U").charAt(0).toUpperCase();
+function Person({ user, action }) { return <div className="flex items-center gap-3 rounded-2xl border border-black/[.07] p-3 dark:border-white/[.1]"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-100 font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-200">{initial(user)}</div><div className="min-w-0 flex-1"><p className="truncate font-semibold">@{user.username}</p><p className="truncate text-xs text-slate-500">{user.airline} · {user.base_city || user.base}</p></div>{action}</div>; }
 
 export function CompareView({ onBack }) {
-  return (
-    <div className="mx-auto max-w-3xl px-5 pb-24 pt-8 lg:px-8 lg:pb-8">
-      <button
-        onClick={onBack}
-        className="mb-6 grid h-10 w-10 place-items-center rounded-full text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]"
-        aria-label="Volver al calendario"
-      >
-        <ArrowLeft size={20} />
-      </button>
-      <h1 className="text-3xl font-semibold tracking-[-0.04em]">Comparar</h1>
-      <p className="mt-2 text-slate-500">
-        Encuentra coincidencias con tus amistades.
-      </p>
-      <div className="mt-10 flex min-h-[360px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white px-6 text-center dark:border-white/15 dark:bg-[#14171A]">
-        <div className="grid h-14 w-14 place-items-center rounded-[18px] bg-blue-50 text-[#176BFF] dark:bg-blue-950/50">
-          <Users size={25} />
-        </div>
-        <h2 className="mt-5 text-lg font-semibold">
-          Todavía no has añadido a ninguna amistad.
-        </h2>
-        <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">
-          Cuando conectes con alguien, podrás ver aquí vuestros días y
-          actividades coincidentes.
-        </p>
-        <Button className="mt-6">
-          <Plus size={17} />
-          Añadir amistad
-        </Button>
-      </div>
-    </div>
-  );
+  const [network, setNetwork] = useState(empty); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [open, setOpen] = useState(false); const [query, setQuery] = useState(""); const [results, setResults] = useState([]); const [searching, setSearching] = useState(false); const [working, setWorking] = useState(null); const [confirming, setConfirming] = useState(null);
+  const refresh = async () => { setLoading(true); try { setNetwork(await loadFriendships()); } catch { setError("No se han podido cargar tus amistades."); } finally { setLoading(false); } };
+  useEffect(() => { refresh(); }, []);
+  useEffect(() => { const close = (event) => event.key === "Escape" && (setOpen(false), setConfirming(null)); window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, []);
+  const search = async (event) => { event.preventDefault(); if (!query.trim()) return; setSearching(true); setError(""); try { setResults(await searchProfiles(query)); } catch { setError("No se ha podido realizar la búsqueda."); } finally { setSearching(false); } };
+  const add = async (id) => { setWorking(id); setError(""); try { await sendFriendRequest(id); await refresh(); setResults((items) => items.map((item) => item.id === id ? { ...item, requestSent: true } : item)); } catch (e) { setError(e.message || "No se ha podido enviar la solicitud."); } finally { setWorking(null); } };
+  const respond = async (id, status) => { setWorking(id); setError(""); try { await respondToFriendRequest(id, status); await refresh(); } catch { setError("No se ha podido actualizar la solicitud."); } finally { setWorking(null); } };
+  const remove = async () => { if (!confirming) return; setWorking(confirming.id); setError(""); setNotice(""); try { await removeFriend(confirming.id); setConfirming(null); setNotice(`Has eliminado a @${confirming.username} de tus amistades.`); await refresh(); } catch (e) { setError(e.message || "No se ha podido eliminar la amistad."); } finally { setWorking(null); } };
+  const sent = new Set(network.sent.map((item) => item.username)); const friends = new Set(network.friends.map((item) => item.username));
+  return <div className="mx-auto max-w-3xl px-5 pb-24 pt-8 lg:px-8 lg:pb-8"><button onClick={onBack} className="mb-6 grid h-10 w-10 place-items-center rounded-full text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]" aria-label="Volver al calendario"><ArrowLeft size={20} /></button><div className="flex items-start justify-between gap-4"><div><h1 className="text-3xl font-semibold tracking-[-0.04em]">Comparar</h1><p className="mt-2 text-slate-500">Encuentra coincidencias con tus amistades.</p></div>{network.friends.length > 0 && <Button onClick={() => { setOpen(true); setError(""); }}><Plus size={17} />Añadir amistad</Button>}</div>{error && <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-200">{error}</p>}{notice && <p className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">{notice}</p>}{loading ? <div className="flex min-h-[300px] items-center justify-center"><LoaderCircle className="animate-spin text-blue-600" /></div> : <div className="mt-8 space-y-8">{network.friends.length ? <section><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Amistades</h2><div className="space-y-2">{network.friends.map((user) => <Person key={user.id} user={user} action={<button onClick={() => setConfirming(user)} disabled={working === user.id} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950/30" aria-label={`Eliminar a @${user.username}`}><Trash2 size={17} /></button>} />)}</div></section> : <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white px-6 text-center dark:border-white/15 dark:bg-[#14171A]"><div className="grid h-14 w-14 place-items-center rounded-[18px] bg-blue-50 text-[#176BFF] dark:bg-blue-950/50"><Users size={25} /></div><h2 className="mt-5 text-lg font-semibold">Todavía no has añadido ninguna amistad.</h2><p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">Cuando conectes con alguien, podrás ver aquí vuestros días y actividades coincidentes.</p><Button className="mt-6" onClick={() => setOpen(true)}><Plus size={17} />Añadir amistad</Button></div>}{network.received.length > 0 && <section><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Solicitudes recibidas</h2><div className="space-y-2">{network.received.map((user) => <Person key={user.id} user={user} action={<div className="flex gap-1"><Button className="!min-h-9 !px-3" onClick={() => respond(user.id, "accepted")} disabled={working === user.id} ariaLabel="Aceptar solicitud"><Check size={16} /></Button><Button variant="secondary" className="!min-h-9 !px-3" onClick={() => respond(user.id, "rejected")} disabled={working === user.id} ariaLabel="Rechazar solicitud"><X size={16} /></Button></div>} />)}</div></section>}{network.sent.length > 0 && <section><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Solicitudes enviadas</h2><div className="space-y-2">{network.sent.map((user) => <Person key={user.id} user={user} action={<span className="text-xs font-semibold text-slate-500">Pendiente</span>} />)}</div></section>}</div>}{open && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-5" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}><div role="dialog" aria-modal="true" aria-label="Añadir amistad" className="max-h-[min(680px,90vh)] w-full max-w-lg overflow-y-auto rounded-[24px] bg-white p-6 shadow-2xl dark:bg-[#14171A]"><div className="flex items-center justify-between"><h2 className="text-xl font-semibold">Añadir amistad</h2><button onClick={() => setOpen(false)} className="rounded-full p-2 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Cerrar"><X size={20} /></button></div><form onSubmit={search} className="mt-5 flex items-end gap-2"><div className="flex-1"><Input label="Buscar por usuario" icon={Search} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="@usuario" /></div><Button type="submit" disabled={searching || !query.trim()}>{searching ? <LoaderCircle className="animate-spin" size={17} /> : "Buscar"}</Button></form>{results.length > 0 && <div className="mt-5 space-y-2">{results.map((user) => <Person key={user.id} user={user} action={friends.has(user.username) ? <span className="text-xs font-semibold text-emerald-600">Ya sois amigos</span> : sent.has(user.username) || user.requestSent ? <span className="text-xs font-semibold text-slate-500">Enviada</span> : <Button className="!min-h-9 !px-3" onClick={() => add(user.id)} disabled={working === user.id}>{working === user.id ? <LoaderCircle className="animate-spin" size={16} /> : "Añadir"}</Button>} />)}</div>}{!searching && query && !results.length && <p className="mt-5 text-center text-sm text-slate-500">No se han encontrado usuarios.</p>}</div></div>}{confirming && <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/40 p-5"><div role="alertdialog" aria-modal="true" className="w-full max-w-sm rounded-[22px] bg-white p-6 shadow-2xl dark:bg-[#14171A]"><h2 className="text-lg font-semibold">Eliminar amistad</h2><p className="mt-2 text-sm leading-relaxed text-slate-500">¿Quieres eliminar a @{confirming.username} de tus amistades?</p><div className="mt-6 flex justify-end gap-2"><Button variant="secondary" onClick={() => setConfirming(null)} disabled={working === confirming.id}>Cancelar</Button><Button variant="danger" onClick={remove} disabled={working === confirming.id}>{working === confirming.id ? <LoaderCircle className="animate-spin" size={17} /> : "Eliminar"}</Button></div></div></div>}</div>;
 }

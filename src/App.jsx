@@ -327,7 +327,7 @@ export default function App() {
               />
             )}{" "}
             {active === "compare" && (
-              <CompareView onBack={() => setActive("calendar")} />
+              <CompareView userId={session?.user?.id} onBack={() => setActive("calendar")} />
             )}{" "}
             {active === "summary" && (
               <SummaryView

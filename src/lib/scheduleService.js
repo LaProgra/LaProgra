@@ -48,6 +48,46 @@ export async function loadProfile(userId) {
   return data;
 }
 
+export async function searchProfiles(query) {
+  const { data, error } = await supabase.rpc("search_profiles", { search_term: String(query || "").replace(/^@/, "").trim() });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function loadFriendships() {
+  const { data, error } = await supabase.rpc("load_friendships");
+  if (error) throw error;
+  return { friends: data?.friends || [], received: data?.received || [], sent: data?.sent || [] };
+}
+
+export async function sendFriendRequest(targetUserId) {
+  const { data, error } = await supabase.rpc("send_friend_request", { target_user_id: targetUserId });
+  if (error) {
+    if (error.message?.includes("already_friends")) throw new Error("Ya sois amigos.");
+    if (error.message?.includes("request_already_pending") || error.code === "23505") throw new Error("Ya existe una solicitud con este usuario.");
+    throw error;
+  }
+  return data;
+}
+
+export async function respondToFriendRequest(requestId, status) {
+  const { data, error } = await supabase.rpc("respond_friend_request", { request_id: requestId, next_status: status });
+  if (error) throw error;
+  return data;
+}
+
+export async function removeFriend(friendUserId) {
+  const { error } = await supabase.rpc("remove_friendship", {
+    friend_user_id: friendUserId,
+  });
+  if (error) {
+    if (error.message?.includes("friendship_not_found")) {
+      throw new Error("La amistad ya no existe.");
+    }
+    throw error;
+  }
+}
+
 export async function saveScheduleEvents(userId, eventsByDay) {
   const rows = scheduleRows(userId, eventsByDay);
   // sustituye la programación anterior del usuario
