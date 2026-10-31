@@ -28,6 +28,7 @@ import {
   formatEventTime,
 } from "../../lib/timeZone";
 import { getAirportCity, getAirportCoordinates } from "../../lib/airports";
+import { getEventRoute, isProgrammedActivity } from "../../lib/scheduleAnalysis";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -35,24 +36,6 @@ function periodLabel(period) {
   return new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" })
     .format(new Date(period.year, period.month - 1, 1))
     .replace(" de ", " ");
-}
-
-function getRoute(event) {
-  const value = String(event.label || "")
-    .toUpperCase()
-    .replace(/\s/g, "");
-  return /^[A-Z]{3}-[A-Z]{3}$/.test(value) ? value : null;
-}
-
-function isProgrammedActivity(event) {
-  const text = `${event.label || ""} ${event.desc || ""}`.toUpperCase();
-  return Boolean(
-    event.flightNumber ||
-    getRoute(event) ||
-    event.type === "training" ||
-    event.type === "reserve" ||
-    /\b(?:SIM|SIMULADOR|LPC|OPC|IMAG|IMAGINARIA)\b/.test(text),
-  );
 }
 
 function calculateSummary(schedule, period, timeZone, baseIata) {
@@ -72,14 +55,14 @@ function calculateSummary(schedule, period, timeZone, baseIata) {
     (event) => event.startsAt && event.endsAt && event.type !== "rest",
   );
   const flights = events.filter(
-    (event) => event.flightNumber && getRoute(event),
+    (event) => event.flightNumber && getEventRoute(event),
   );
   const routes = new Map();
   const destinations = new Set();
   const destinationCounts = new Map();
   const airports = new Map();
   flights.forEach((event) => {
-    const route = getRoute(event);
+    const route = getEventRoute(event);
     const [origin, destination] = route.split("-");
     routes.set(route, (routes.get(route) || 0) + 1);
     destinations.add(destination);

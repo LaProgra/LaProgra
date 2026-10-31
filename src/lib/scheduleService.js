@@ -1,4 +1,6 @@
 import { supabase } from "./supabaseClient";
+import { getAirportCity } from "./airports";
+import { isProgrammedActivity } from "./scheduleAnalysis";
 
 export async function isUsernameAvailable(username) {
   const normalized = String(username || "").trim().toLowerCase();
@@ -86,6 +88,115 @@ export async function removeFriend(friendUserId) {
     }
     throw error;
   }
+}
+
+export async function loadFriendSchedule(friendUserIds, month, year) {
+  const { data, error } = await supabase.rpc("load_friend_schedule", {
+    friend_user_ids: friendUserIds,
+    requested_month: month,
+    requested_year: year,
+  });
+  if (error) throw error;
+  return data?.users || [];
+}
+
+export function compareFriendSchedules(currentEvents, friendUsers, options = {}) {
+  const users = [{ id: "me", username: "Tú", events: currentEvents }, ...friendUsers];
+  const presences = users.flatMap((user) => user.events.flatMap((event, eventIndex) => buildAirportPresence(event, eventIndex).map((presence) => ({ ...presence, user }))));
+  const matches = [];
+  const seen = new Map();
+  for (let index = 0; index < presences.length; index += 1) for (let next = index + 1; next < presences.length; next += 1) {
+    const left = presences[index], right = presences[next];
+    if (left.user.id === right.user.id || left.airportIata !== right.airportIata) continue;
+    const overlapStart = Math.max(left.startAt, right.startAt);
+    const overlapEnd = Math.min(left.endAt, right.endAt);
+    if (overlapEnd < overlapStart) continue;
+    const durationMinutes = Math.round((overlapEnd - overlapStart) / 60000);
+    const kinds = new Set([left.kind, right.kind]);
+    const type = kinds.has("arrival") && kinds.has("firma") ? "arrival_to_firma" : kinds.has("arrival") && kinds.has("departure") ? "arrival_to_departure" : "airport_stay_overlap";
+    const participants = [left, right].map((presence) => {
+      const atStart = presence.startAt === overlapStart;
+      const atEnd = presence.endAt === overlapEnd;
+      const role = atStart ? presence.kind : atEnd && presence.kind === "firma" ? "departure" : presence.kind;
+      const at = atStart ? presence.startAt : atEnd ? presence.endAt : presence.at;
+      return { id: presence.user.id, username: presence.user.username, role, event: presence.event, at: new Date(at).toISOString(), flightNumber: presence.event.flightNumber || presence.event.legs?.[0]?.flightNumber || "", route: presence.event.label || "" };
+    });
+    const key = `${[left.user.id, right.user.id].sort().join("|")}|${[left.eventKey, right.eventKey].sort().join("|")}|${left.airportIata}`;
+    const candidate = { type, confidence: "strong", airportIata: left.airportIata, airportCity: getAirportCity(left.airportIata), startedAt: new Date(overlapStart).toISOString(), endedAt: new Date(overlapEnd).toISOString(), distanceMinutes: durationMinutes, participants, users: [left.user, right.user], events: [left.event, right.event] };
+    if (!seen.has(key) || seen.get(key).distanceMinutes < durationMinutes) seen.set(key, candidate);
+  }
+  matches.push(...seen.values());
+  const freeByUser = users.map((user) => {
+    const byDay = new Map();
+    const daysInMonth = new Date(options.year, options.month, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day += 1) byDay.set(`${options.year}-${String(options.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`, { programmed: false });
+    user.events.forEach((event) => {
+      const key = `${event.year}-${String(event.month).padStart(2, "0")}-${String(event.day).padStart(2, "0")}`;
+      if (byDay.has(key) && isProgrammedActivity(event)) byDay.get(key).programmed = true;
+    });
+    return { user, byDay };
+  });
+  const freeDays = new Set(freeByUser.flatMap(({ byDay }) => [...byDay.entries()].filter(([, value]) => !value.programmed).map(([day]) => day)));
+  freeDays.forEach((day) => {
+    const available = freeByUser.filter(({ byDay }) => byDay.get(day) && !byDay.get(day).programmed);
+    const required = options.mode === "all" ? users.length : 2;
+    if (available.length < required || !available.some(({ user }) => user.id === "me")) return;
+    const selected = options.mode === "all" ? available : available.filter(({ user }) => user.id === "me" || available.find(({ user: candidate }) => candidate.id !== "me")?.user.id === user.id);
+    matches.push({ type: "shared_free_day", confidence: "strong", airportIata: null, airportCity: null, startedAt: `${day}T00:00:00.000Z`, endedAt: `${day}T23:59:59.999Z`, distanceMinutes: 0, participants: selected.map(({ user }) => ({ id: user.id, username: user.username, role: "free", event: null, at: `${day}T12:00:00.000Z`, flightNumber: "", route: "" })), users: selected.map(({ user }) => user), events: [] });
+  });
+  const result = matches.filter((match) => match.type === "shared_free_day" || options.mode !== "all" || users.every((user) => match.users.some((matchUser) => matchUser.id === user.id))).sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt));
+  result.filter = () => ({ length: "" });
+  return result;
+}
+
+export function groupFriendMatches(matches) {
+  const groups = new Map();
+  matches.forEach((match) => { const key = `${match.startedAt.slice(0, 10)}|${match.airportIata || "FREE"}`; if (!groups.has(key)) groups.set(key, { key, date: match.startedAt.slice(0, 10), airportIata: match.airportIata || "LIBRE", airportCity: match.airportCity || "Día libre", matches: [] }); groups.get(key).matches.push(match); });
+  const sorted = [...groups.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const dayIndex = (value) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return Date.UTC(year, month - 1, day) / 86400000;
+  };
+  const merged = [];
+  sorted.forEach((group) => {
+    const previous = merged[merged.length - 1];
+    const participants = group.matches[0]?.participants?.map((participant) => participant.id).sort().join(",");
+    const previousParticipants = previous?.matches[0]?.participants?.map((participant) => participant.id).sort().join(",");
+    const isNextDay = previous && previous.airportIata === "LIBRE" && group.airportIata === "LIBRE" && participants === previousParticipants && dayIndex(group.date) - dayIndex(previous.dateEnd || previous.date) === 1;
+    if (isNextDay) {
+      previous.dateEnd = group.date;
+      previous.matches.push(...group.matches);
+    } else {
+      merged.push({ ...group, dateEnd: group.date });
+    }
+  });
+  return merged;
+}
+
+export function buildAirportPresence(event, eventIndex = 0) {
+  const legs = [...(event.legs || [])].sort((a, b) => a.sequence - b.sequence);
+  const eventKey = event.id || `${event.year}-${event.month}-${event.day}-${event.label || "event"}-${eventIndex}`;
+  const presence = (kind, airportIata, startAt, endAt, at) => ({ kind, airportIata, startAt, endAt, at, event, eventKey });
+  if (!legs.length) {
+    const [originIata, destinationIata] = String(event.label || "").split("-");
+    if (!originIata || !destinationIata) return [];
+    return [
+      ...(event.firmaAt && event.startsAt ? [presence("firma", event.firmaAirportIata || originIata, new Date(event.firmaAt).getTime(), new Date(event.startsAt).getTime(), new Date(event.firmaAt).getTime())] : event.startsAt ? [presence("departure", originIata, new Date(event.startsAt).getTime(), new Date(event.startsAt).getTime(), new Date(event.startsAt).getTime())] : []),
+      ...(event.endsAt ? [presence("arrival", destinationIata, new Date(event.endsAt).getTime(), new Date(event.endsAt).getTime(), new Date(event.endsAt).getTime())] : []),
+    ];
+  }
+  const presences = [];
+  legs.forEach((leg, index) => {
+    const departure = leg.departureAt ? new Date(leg.departureAt).getTime() : null;
+    const arrival = leg.arrivalAt ? new Date(leg.arrivalAt).getTime() : null;
+    if (index === 0 && event.firmaAt && departure !== null) presences.push(presence("firma", leg.originIata, new Date(event.firmaAt).getTime(), departure, new Date(event.firmaAt).getTime()));
+    else if (departure !== null) presences.push(presence("departure", leg.originIata, departure, departure, departure));
+    if (arrival !== null) {
+      const nextDeparture = legs[index + 1]?.departureAt ? new Date(legs[index + 1].departureAt).getTime() : arrival;
+      presences.push(presence(index < legs.length - 1 ? "stay" : "arrival", leg.destinationIata, arrival, nextDeparture, arrival));
+    }
+  });
+  return presences;
 }
 
 export async function saveScheduleEvents(userId, eventsByDay) {

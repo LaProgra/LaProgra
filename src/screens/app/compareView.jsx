@@ -1,21 +1,479 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft, Check, LoaderCircle, Plus, Search, Trash2, Users, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import { Button, Input } from "../../components/shared";
-import { loadFriendships, removeFriend, respondToFriendRequest, searchProfiles, sendFriendRequest } from "../../lib/scheduleService";
+import {
+  compareFriendSchedules,
+  groupFriendMatches,
+  loadFriendSchedule,
+  loadFriendships,
+  removeFriend,
+  searchProfiles,
+  sendFriendRequest,
+} from "../../lib/scheduleService";
 
-const empty = { friends: [], received: [], sent: [] };
-const initial = (user) => (user?.username || "U").charAt(0).toUpperCase();
-function Person({ user, action }) { return <div className="flex items-center gap-3 rounded-2xl border border-black/[.07] p-3 dark:border-white/[.1]"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-100 font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-200">{initial(user)}</div><div className="min-w-0 flex-1"><p className="truncate font-semibold">@{user.username}</p><p className="truncate text-xs text-slate-500">{user.airline} · {user.base_city || user.base}</p></div>{action}</div>; }
+const flatten = (schedule) => Object.values(schedule || {}).flat();
+const formatDate = (value) =>
+  new Intl.DateTimeFormat("es-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(`${value}T12:00:00`));
+const formatTime = (value) =>
+  new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+const labels = {
+  arrival_to_firma: "Llegada y firma",
+  arrival_to_departure: "Llegada y salida",
+  airport_stay_overlap: "Coincidencia en aeropuerto",
+};
 
-export function CompareView({ onBack }) {
-  const [network, setNetwork] = useState(empty); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [open, setOpen] = useState(false); const [query, setQuery] = useState(""); const [results, setResults] = useState([]); const [searching, setSearching] = useState(false); const [working, setWorking] = useState(null); const [confirming, setConfirming] = useState(null);
-  const refresh = async () => { setLoading(true); try { setNetwork(await loadFriendships()); } catch { setError("No se han podido cargar tus amistades."); } finally { setLoading(false); } };
-  useEffect(() => { refresh(); }, []);
-  useEffect(() => { const close = (event) => event.key === "Escape" && (setOpen(false), setConfirming(null)); window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, []);
-  const search = async (event) => { event.preventDefault(); if (!query.trim()) return; setSearching(true); setError(""); try { setResults(await searchProfiles(query)); } catch { setError("No se ha podido realizar la búsqueda."); } finally { setSearching(false); } };
-  const add = async (id) => { setWorking(id); setError(""); try { await sendFriendRequest(id); await refresh(); setResults((items) => items.map((item) => item.id === id ? { ...item, requestSent: true } : item)); } catch (e) { setError(e.message || "No se ha podido enviar la solicitud."); } finally { setWorking(null); } };
-  const respond = async (id, status) => { setWorking(id); setError(""); try { await respondToFriendRequest(id, status); await refresh(); } catch { setError("No se ha podido actualizar la solicitud."); } finally { setWorking(null); } };
-  const remove = async () => { if (!confirming) return; setWorking(confirming.id); setError(""); setNotice(""); try { await removeFriend(confirming.id); setConfirming(null); setNotice(`Has eliminado a @${confirming.username} de tus amistades.`); await refresh(); } catch (e) { setError(e.message || "No se ha podido eliminar la amistad."); } finally { setWorking(null); } };
-  const sent = new Set(network.sent.map((item) => item.username)); const friends = new Set(network.friends.map((item) => item.username));
-  return <div className="mx-auto max-w-3xl px-5 pb-24 pt-8 lg:px-8 lg:pb-8"><button onClick={onBack} className="mb-6 grid h-10 w-10 place-items-center rounded-full text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]" aria-label="Volver al calendario"><ArrowLeft size={20} /></button><div className="flex items-start justify-between gap-4"><div><h1 className="text-3xl font-semibold tracking-[-0.04em]">Comparar</h1><p className="mt-2 text-slate-500">Encuentra coincidencias con tus amistades.</p></div>{network.friends.length > 0 && <Button onClick={() => { setOpen(true); setError(""); }}><Plus size={17} />Añadir amistad</Button>}</div>{error && <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-200">{error}</p>}{notice && <p className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">{notice}</p>}{loading ? <div className="flex min-h-[300px] items-center justify-center"><LoaderCircle className="animate-spin text-blue-600" /></div> : <div className="mt-8 space-y-8">{network.friends.length ? <section><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Amistades</h2><div className="space-y-2">{network.friends.map((user) => <Person key={user.id} user={user} action={<button onClick={() => setConfirming(user)} disabled={working === user.id} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950/30" aria-label={`Eliminar a @${user.username}`}><Trash2 size={17} /></button>} />)}</div></section> : <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white px-6 text-center dark:border-white/15 dark:bg-[#14171A]"><div className="grid h-14 w-14 place-items-center rounded-[18px] bg-blue-50 text-[#176BFF] dark:bg-blue-950/50"><Users size={25} /></div><h2 className="mt-5 text-lg font-semibold">Todavía no has añadido ninguna amistad.</h2><p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">Cuando conectes con alguien, podrás ver aquí vuestros días y actividades coincidentes.</p><Button className="mt-6" onClick={() => setOpen(true)}><Plus size={17} />Añadir amistad</Button></div>}{network.received.length > 0 && <section><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Solicitudes recibidas</h2><div className="space-y-2">{network.received.map((user) => <Person key={user.id} user={user} action={<div className="flex gap-1"><Button className="!min-h-9 !px-3" onClick={() => respond(user.id, "accepted")} disabled={working === user.id} ariaLabel="Aceptar solicitud"><Check size={16} /></Button><Button variant="secondary" className="!min-h-9 !px-3" onClick={() => respond(user.id, "rejected")} disabled={working === user.id} ariaLabel="Rechazar solicitud"><X size={16} /></Button></div>} />)}</div></section>}{network.sent.length > 0 && <section><h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Solicitudes enviadas</h2><div className="space-y-2">{network.sent.map((user) => <Person key={user.id} user={user} action={<span className="text-xs font-semibold text-slate-500">Pendiente</span>} />)}</div></section>}</div>}{open && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-5" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}><div role="dialog" aria-modal="true" aria-label="Añadir amistad" className="max-h-[min(680px,90vh)] w-full max-w-lg overflow-y-auto rounded-[24px] bg-white p-6 shadow-2xl dark:bg-[#14171A]"><div className="flex items-center justify-between"><h2 className="text-xl font-semibold">Añadir amistad</h2><button onClick={() => setOpen(false)} className="rounded-full p-2 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Cerrar"><X size={20} /></button></div><form onSubmit={search} className="mt-5 flex items-end gap-2"><div className="flex-1"><Input label="Buscar por usuario" icon={Search} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="@usuario" /></div><Button type="submit" disabled={searching || !query.trim()}>{searching ? <LoaderCircle className="animate-spin" size={17} /> : "Buscar"}</Button></form>{results.length > 0 && <div className="mt-5 space-y-2">{results.map((user) => <Person key={user.id} user={user} action={friends.has(user.username) ? <span className="text-xs font-semibold text-emerald-600">Ya sois amigos</span> : sent.has(user.username) || user.requestSent ? <span className="text-xs font-semibold text-slate-500">Enviada</span> : <Button className="!min-h-9 !px-3" onClick={() => add(user.id)} disabled={working === user.id}>{working === user.id ? <LoaderCircle className="animate-spin" size={16} /> : "Añadir"}</Button>} />)}</div>}{!searching && query && !results.length && <p className="mt-5 text-center text-sm text-slate-500">No se han encontrado usuarios.</p>}</div></div>}{confirming && <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/40 p-5"><div role="alertdialog" aria-modal="true" className="w-full max-w-sm rounded-[22px] bg-white p-6 shadow-2xl dark:bg-[#14171A]"><h2 className="text-lg font-semibold">Eliminar amistad</h2><p className="mt-2 text-sm leading-relaxed text-slate-500">¿Quieres eliminar a @{confirming.username} de tus amistades?</p><div className="mt-6 flex justify-end gap-2"><Button variant="secondary" onClick={() => setConfirming(null)} disabled={working === confirming.id}>Cancelar</Button><Button variant="danger" onClick={remove} disabled={working === confirming.id}>{working === confirming.id ? <LoaderCircle className="animate-spin" size={17} /> : "Eliminar"}</Button></div></div></div>}</div>;
+function MatchCard({ group }) {
+  const [expanded, setExpanded] = useState(false);
+  const free = group.airportIata === "LIBRE";
+  const people = [
+    ...new Map(
+      group.matches
+        .flatMap((match) => match.participants)
+        .map((person) => [person.id, person]),
+    ).values(),
+  ];
+  const range =
+    group.date === group.dateEnd
+      ? formatDate(group.date)
+      : `${formatDate(group.date)} - ${formatDate(group.dateEnd)}`;
+  return (
+    <article
+      className={`rounded-2xl border p-4 ${free ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/25" : "border-black/[.07] bg-blue-50/70 dark:border-white/[.1] dark:bg-blue-950/25"}`}
+    >
+      <p className="font-semibold">
+        {free
+          ? "Días libres compartidos"
+          : `${group.airportIata} · ${group.airportCity}`}
+      </p>
+      <p className="mt-1 text-xs capitalize text-slate-600 dark:text-slate-300">
+        {range}
+      </p>
+      <p className="mt-2 text-sm font-medium">
+        {people.map((person) => person.username).join(", ")}
+      </p>
+      {free ? (
+        <p className="mt-1 text-xs text-slate-500">
+          Ninguno tiene actividad programada durante este intervalo.
+        </p>
+      ) : (
+        group.matches.map((match, index) => (
+          <div
+            key={`${match.startedAt}-${index}`}
+            className="mt-3 rounded-xl bg-white/70 p-3 text-sm dark:bg-white/[.06]"
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-semibold">
+                {labels[match.type] || "Coincidencia"}
+              </p>
+              <span className="text-emerald-600">
+                Solapamiento: {match.distanceMinutes} min
+              </span>
+            </div>
+            <button
+              className="mt-2 text-xs font-semibold text-blue-700"
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? "Ocultar detalle" : "Ver vuelos y horarios"}
+            </button>
+            {expanded && (
+              <div className="mt-3 space-y-2 border-t border-black/5 pt-3 dark:border-white/10">
+                {match.participants.map((person) => (
+                  <div key={person.id}>
+                    <p className="font-medium">
+                      {person.username} · {person.role} a las{" "}
+                      {formatTime(person.at)}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {person.flightNumber || "Actividad"} · {person.route}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </article>
+  );
+}
+
+/* Modal para buscar y añadir amistades. El estado "open" vive en el padre,
+   así cualquier botón (cabecera o estado vacío) puede abrirlo. */
+function AddFriendModal({ open, onClose }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!open) return null;
+
+  const search = async (event) => {
+    event.preventDefault();
+    if (!query.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      setResults(await searchProfiles(query));
+    } catch {
+      setError("No se ha podido realizar la búsqueda.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const add = async (id) => {
+    try {
+      await sendFriendRequest(id);
+      setResults((items) =>
+        items.map((item) =>
+          item.id === id ? { ...item, requestSent: true } : item,
+        ),
+      );
+    } catch (e) {
+      setError(e.message || "No se ha podido enviar la solicitud.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-5">
+      <div className="w-full max-w-lg rounded-[24px] bg-white p-6 dark:bg-[#14171A]">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Añadir amistad</h2>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X />
+          </button>
+        </div>
+        <form onSubmit={search} className="mt-5 flex items-end gap-2">
+          <div className="flex-1">
+            <Input
+              label="Buscar por usuario"
+              icon={Search}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="@usuario"
+            />
+          </div>
+          <Button type="submit" disabled={loading || !query.trim()}>
+            {loading ? (
+              <LoaderCircle className="animate-spin" size={17} />
+            ) : (
+              "Buscar"
+            )}
+          </Button>
+        </form>
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        <div className="mt-5 space-y-2">
+          {results.map((user) => (
+            <div
+              key={user.id}
+              className="flex items-center justify-between rounded-xl border border-black/10 p-3 dark:border-white/10"
+            >
+              <div>
+                <p className="font-semibold">@{user.username}</p>
+                <p className="text-xs text-slate-500">
+                  {user.airline} · {user.base_city || user.base}
+                </p>
+              </div>
+              {user.requestSent ? (
+                <span className="text-xs text-slate-500">Pendiente</span>
+              ) : (
+                <Button
+                  className="!min-h-9 !px-3"
+                  onClick={() => add(user.id)}
+                >
+                  Añadir
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange }) {
+  const [friends, setFriends] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [friendEvents, setFriendEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [error, setError] = useState("");
+  const [mode, setMode] = useState("any");
+  const [activeGroup, setActiveGroup] = useState(null);
+  const [removing, setRemoving] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const month = schedulePeriod?.month || new Date().getMonth() + 1;
+  const year = schedulePeriod?.year || new Date().getFullYear();
+  const monthLabel = new Intl.DateTimeFormat("es-ES", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1));
+
+  useEffect(() => {
+    loadFriendships()
+      .then((network) => setFriends(network.friends || []))
+      .catch(() => setError("No se han podido cargar tus amistades."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!selected.length) {
+      setFriendEvents([]);
+      return undefined;
+    }
+    let cancelled = false;
+    setLoadingEvents(true);
+    loadFriendSchedule(selected, month, year)
+      .then((users) => !cancelled && setFriendEvents(users))
+      .catch(
+        () =>
+          !cancelled &&
+          setError("No se han podido cargar los turnos de tus amistades."),
+      )
+      .finally(() => !cancelled && setLoadingEvents(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, month, year]);
+
+  const matches = useMemo(
+    () =>
+      compareFriendSchedules(flatten(schedule), friendEvents, {
+        mode,
+        month,
+        year,
+      }),
+    [schedule, friendEvents, mode, month, year],
+  );
+  const allGroups = useMemo(() => groupFriendMatches(matches), [matches]);
+  const groups = activeGroup
+    ? allGroups.filter((group) => group.key === activeGroup)
+    : allGroups;
+  const markers = allGroups.map((group) => ({
+    key: group.key,
+    free: group.airportIata === "LIBRE",
+    label:
+      group.airportIata === "LIBRE" && group.date !== group.dateEnd
+        ? `${group.date.slice(8, 10)} - ${group.dateEnd.slice(8, 10)}`
+        : `${group.date.slice(8, 10)} · ${group.matches.length}`,
+  }));
+
+  const changeMonth = (offset) => {
+    const next = new Date(year, month - 1 + offset, 1);
+    onPeriodChange?.({ month: next.getMonth() + 1, year: next.getFullYear() });
+    setActiveGroup(null);
+  };
+
+  const deleteFriend = async (friend) => {
+    if (
+      !window.confirm(
+        `¿Quieres eliminar a @${friend.username} de tus amistades?`,
+      )
+    )
+      return;
+    setRemoving(friend.id);
+    try {
+      await removeFriend(friend.id);
+      setFriends((items) => items.filter((item) => item.id !== friend.id));
+      setSelected((ids) => ids.filter((id) => id !== friend.id));
+    } catch {
+      setError("No se ha podido eliminar la amistad.");
+    } finally {
+      setRemoving(null);
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center">
+        <LoaderCircle className="animate-spin text-blue-600" />
+      </div>
+    );
+
+  return (
+    <div className="mx-auto max-w-3xl px-5 pb-24 pt-8 lg:px-8 lg:pb-8">
+      <button
+        onClick={onBack}
+        className="mb-6 grid h-10 w-10 place-items-center rounded-full text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]"
+        aria-label="Volver al calendario"
+      >
+        <ArrowLeft size={20} />
+      </button>
+      <header>
+        {/* Título y botón en la misma fila: siempre alineados verticalmente */}
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-3xl font-semibold tracking-[-0.04em]">
+            Comparar
+          </h1>
+          <Button onClick={() => setAddOpen(true)} aria-label="Añadir amistad">
+            <Plus size={17} />
+            <span className="hidden sm:inline">Añadir amistad</span>
+          </Button>
+        </div>
+        <p className="mt-2 text-slate-500">
+          Encuentra coincidencias con tus amistades.
+        </p>
+        <div className="mt-3 flex items-center gap-1">
+          <button
+            onClick={() => changeMonth(-1)}
+            aria-label="Mes anterior"
+            className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
+          >
+            <ChevronLeft size={19} />
+          </button>
+          <h2 className="min-w-[170px] text-center text-lg font-semibold capitalize">
+            {monthLabel}
+          </h2>
+          <button
+            onClick={() => changeMonth(1)}
+            aria-label="Mes siguiente"
+            className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
+          >
+            <ChevronRight size={19} />
+          </button>
+        </div>
+      </header>
+      {error && (
+        <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+      {friends.length ? (
+        <div className="mt-8 space-y-8">
+          <section>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Comparar con
+            </h2>
+            <div className="space-y-2">
+              {friends.map((friend) => (
+                <div
+                  key={friend.id}
+                  className="flex items-center gap-3 rounded-2xl border border-black/[.07] p-3 dark:border-white/[.1]"
+                >
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(friend.id)}
+                      onChange={() =>
+                        setSelected((ids) =>
+                          ids.includes(friend.id)
+                            ? ids.filter((id) => id !== friend.id)
+                            : [...ids, friend.id],
+                        )
+                      }
+                    />
+                    <span className="font-semibold">@{friend.username}</span>
+                    <span className="truncate text-xs text-slate-500">
+                      {friend.base_city || friend.base}
+                    </span>
+                  </label>
+                  <button
+                    onClick={() => deleteFriend(friend)}
+                    disabled={removing === friend.id}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950/30"
+                    aria-label={`Eliminar a @${friend.username}`}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="rounded-[24px] border border-black/[.07] bg-white p-5 dark:border-white/[.1] dark:bg-[#14171A]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">Coincidencias</h2>
+                <p className="text-sm text-slate-500">
+                  {selected.length
+                    ? `${month}/${year}`
+                    : "Selecciona una o más amistades"}
+                </p>
+              </div>
+              <select
+                value={mode}
+                onChange={(event) => setMode(event.target.value)}
+                disabled={selected.length < 2}
+                className="rounded-xl border border-black/10 bg-transparent px-3 py-2 text-sm"
+              >
+                <option value="any">Cualquiera</option>
+                <option value="all">Todos</option>
+              </select>
+            </div>
+            {selected.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {markers.map((marker) => (
+                  <button
+                    key={marker.key}
+                    onClick={() =>
+                      setActiveGroup(
+                        activeGroup === marker.key ? null : marker.key,
+                      )
+                    }
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      activeGroup === marker.key
+                        ? marker.free
+                          ? "bg-emerald-600 text-white"
+                          : "bg-blue-600 text-white"
+                        : marker.free
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-300"
+                          : "bg-blue-50 text-blue-700"
+                    }`}
+                  >
+                    {marker.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {loadingEvents ? (
+              <LoaderCircle className="mt-6 animate-spin text-blue-600" />
+            ) : (
+              <div className="mt-5 space-y-3">
+                {groups.map((group) => (
+                  <MatchCard key={group.key} group={group} />
+                ))}
+                {selected.length > 0 && !groups.length && (
+                  <p className="text-sm text-slate-500">
+                    No hemos encontrado coincidencias este mes.
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      ) : (
+        <div className="mt-8 flex min-h-[300px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white px-6 text-center dark:bg-[#14171A]">
+          <Users size={28} className="text-blue-600" />
+          <h2 className="mt-5 text-lg font-semibold">
+            Todavía no has añadido ninguna amistad.
+          </h2>
+          <Button className="mt-6" onClick={() => setAddOpen(true)}>
+            Añadir amistad
+          </Button>
+        </div>
+      )}
+      <AddFriendModal open={addOpen} onClose={() => setAddOpen(false)} />
+    </div>
+  );
+}
+
+export function CompareView(props) {
+  return <CompareBody {...props} />;
 }
