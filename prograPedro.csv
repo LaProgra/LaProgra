@@ -1,0 +1,494 @@
+"Asunto","Fecha de comienzo","Comienzo","Fecha de finalización","Finalización","Todo el día","Reminder on/off","Reminder Date","Reminder Time","Meeting Organizer","Required Attendees","Optional Attendees","Recursos de la reunión","Billing Information","Categories","Description","Location","Mileage","Priority","Private","Sensitivity","Show time as"
+"Firma 06:20 Pairing 3133","01/11/2026","06:20","01/11/2026","07:20","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"VS453  MAD0620-LCG0740 / 32A ","01/11/2026","07:20","01/11/2026","08:40","Falso","Verdadero","31/10/2026","18:20",,,,,,,"
+TECNICOS
+--------
+CT->E  975551 SANCHEZ SALIDO                , DANIEL FRANCISCO
+TCP
+---
+012112 NONAME,NONAME
+018624 NONAME,NONAME
+029010 NONAME,NONAME
+981625 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB464  LCG0530-MAD0650 / 32D ","02/11/2026","06:30","02/11/2026","07:50","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975551 SANCHEZ SALIDO                , DANIEL FRANCISCO
+TCP
+---
+011716 NONAME,NONAME
+018643 NONAME,NONAME
+019516 NONAME,NONAME
+026107 NONAME,NONAME
+980009 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB647  MAD0745-FCO1010 / 32D +O","02/11/2026","08:45","02/11/2026","11:10","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975551 SANCHEZ SALIDO                , DANIEL FRANCISCO
+TCP
+---
+011716 NONAME,NONAME
+018643 NONAME,NONAME
+019516 NONAME,NONAME
+026107 NONAME,NONAME
+980009 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB648  FCO1100-MAD1335 / 32D ","02/11/2026","12:00","02/11/2026","14:35","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975551 SANCHEZ SALIDO                , DANIEL FRANCISCO
+TCP
+---
+011716 NONAME,NONAME
+018643 NONAME,NONAME
+019516 NONAME,NONAME
+026107 NONAME,NONAME
+980009 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"Firma 08:30 Pairing 3662","03/11/2026","08:30","03/11/2026","09:30","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"IB983  MAD0830-LGW1050 / 321 +O","03/11/2026","09:30","03/11/2026","11:50","Falso","Verdadero","02/11/2026","20:30",,,,,,,"
+TECNICOS
+--------
+CT->E  975551 SANCHEZ SALIDO                , DANIEL FRANCISCO
+TCP
+---
+332732 NONAME,NONAME
+332953 NONAME,NONAME
+363451 NONAME,NONAME
+667494 NONAME,NONAME
+726493 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB984  LGW1145-MAD1405 / 321 ","03/11/2026","12:45","03/11/2026","15:05","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975551 SANCHEZ SALIDO                , DANIEL FRANCISCO
+TCP
+---
+332732 NONAME,NONAME
+332953 NONAME,NONAME
+363451 NONAME,NONAME
+667494 NONAME,NONAME
+726493 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"Firma 14:45 Pairing 3425","05/11/2026","14:45","05/11/2026","15:45","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"IB653  MAD1445-FCO1710 / 320 A+","05/11/2026","15:45","05/11/2026","18:10","Falso","Verdadero","05/11/2026","11:45",,,,,,,"
+TECNICOS
+--------
+CT->E  974608 HERREROS ENTIZNE              , ALBERTO
+TCP
+---
+025995 NONAME,NONAME
+026066 NONAME,NONAME
+026333 NONAME,NONAME
+976695 NONAME,NONAME
+---
+Comida en Aeropuerto antes del vuelo
+","",,"Normal","Falso","Normal","2"
+"IB654  FCO1800-MAD2035 / 320 ","05/11/2026","19:00","05/11/2026","21:35","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  974608 HERREROS ENTIZNE              , ALBERTO
+TCP
+---
+025995 NONAME,NONAME
+026066 NONAME,NONAME
+026333 NONAME,NONAME
+976695 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB473  MAD2115-VGO2235 / 320 +O","05/11/2026","22:15","05/11/2026","23:35","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  974608 HERREROS ENTIZNE              , ALBERTO
+TCP
+---
+025995 NONAME,NONAME
+026066 NONAME,NONAME
+026333 NONAME,NONAME
+976695 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB470  VGO1645-MAD1800 / 320 ","06/11/2026","17:45","06/11/2026","19:00","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  974608 HERREROS ENTIZNE              , ALBERTO
+TCP
+---
+025995 NONAME,NONAME
+026066 NONAME,NONAME
+026333 NONAME,NONAME
+976695 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB787  MAD1905-BER2210 / 320 +O","06/11/2026","20:05","06/11/2026","23:10","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  974608 HERREROS ENTIZNE              , ALBERTO
+TCP
+---
+025995 NONAME,NONAME
+026066 NONAME,NONAME
+026333 NONAME,NONAME
+976695 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB782  BER1035-MAD1350 / 321 +O","07/11/2026","11:35","07/11/2026","14:50","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  974608 HERREROS ENTIZNE              , ALBERTO
+TCP
+---
+018442 NONAME,NONAME
+025995 NONAME,NONAME
+026066 NONAME,NONAME
+026333 NONAME,NONAME
+976695 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB535  MAD1640-LIS1805 / 32A ","07/11/2026","17:40","07/11/2026","19:05","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  974608 HERREROS ENTIZNE              , ALBERTO
+TCP
+---
+025995 NONAME,NONAME
+026066 NONAME,NONAME
+026333 NONAME,NONAME
+976695 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB536  LIS1845-MAD2010 / 32A A+","07/11/2026","19:45","07/11/2026","21:10","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  974608 HERREROS ENTIZNE              , ALBERTO
+TCP
+---
+025995 NONAME,NONAME
+026066 NONAME,NONAME
+026333 NONAME,NONAME
+976695 NONAME,NONAME
+---
+Comida en Aeropuerto despues del vuelo
+","",,"Normal","Falso","Normal","2"
+"Firma 06:15 Pairing 3269","11/11/2026","06:15","11/11/2026","07:15","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"IB569  MAD0615-CDG0820 / 32D ","11/11/2026","07:15","11/11/2026","09:20","Falso","Verdadero","10/11/2026","18:15",,,,,,,"
+TECNICOS
+--------
+CT->E  975771 OLIVER GOMEZ DE LA VEGA       , IGNACIO
+TCP
+---
+018711 NONAME,NONAME
+019873 NONAME,NONAME
+019883 NONAME,NONAME
+026944 NONAME,NONAME
+652271 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB570  CDG0910-MAD1120 / 32D ","11/11/2026","10:10","11/11/2026","12:20","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975771 OLIVER GOMEZ DE LA VEGA       , IGNACIO
+TCP
+---
+018711 NONAME,NONAME
+019873 NONAME,NONAME
+019883 NONAME,NONAME
+026944 NONAME,NONAME
+652271 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB651  MAD1205-FCO1430 / 32D +O","11/11/2026","13:05","11/11/2026","15:30","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975771 OLIVER GOMEZ DE LA VEGA       , IGNACIO
+TCP
+---
+018711 NONAME,NONAME
+019873 NONAME,NONAME
+019883 NONAME,NONAME
+026944 NONAME,NONAME
+652271 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB658  FCO0630-MAD0905 / 32D ","12/11/2026","07:30","12/11/2026","10:05","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975771 OLIVER GOMEZ DE LA VEGA       , IGNACIO
+TCP
+---
+018711 NONAME,NONAME
+019873 NONAME,NONAME
+019883 NONAME,NONAME
+026944 NONAME,NONAME
+652271 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB411  MAD1025-BCN1145 / 32D +O","12/11/2026","11:25","12/11/2026","12:45","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975771 OLIVER GOMEZ DE LA VEGA       , IGNACIO
+TCP
+---
+018711 NONAME,NONAME
+019873 NONAME,NONAME
+019883 NONAME,NONAME
+026944 NONAME,NONAME
+652271 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB412  BCN1235-MAD1400 / 32D ","12/11/2026","13:35","12/11/2026","15:00","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975771 OLIVER GOMEZ DE LA VEGA       , IGNACIO
+TCP
+---
+018711 NONAME,NONAME
+019873 NONAME,NONAME
+019883 NONAME,NONAME
+026944 NONAME,NONAME
+652271 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"Firma 06:25 Pairing 3572","13/11/2026","06:25","13/11/2026","07:40","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"IB781  MAD0640-BER0945 / 32A ","13/11/2026","07:40","13/11/2026","10:45","Falso","Verdadero","12/11/2026","18:25",,,,,,,"
+TECNICOS
+--------
+CT->E  322711 CARBO DE PITARQUE             , BERNARDO
+TCP
+---
+010069 NONAME,NONAME
+019524 NONAME,NONAME
+019631 NONAME,NONAME
+026067 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB788  BER0600-MAD0915 / 32A ","14/11/2026","07:00","14/11/2026","10:15","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  322711 CARBO DE PITARQUE             , BERNARDO
+TCP
+---
+010069 NONAME,NONAME
+019524 NONAME,NONAME
+019631 NONAME,NONAME
+026067 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB563  MAD1025-AGP1145 / 32A +O","14/11/2026","11:25","14/11/2026","12:45","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  322711 CARBO DE PITARQUE             , BERNARDO
+TCP
+---
+010069 NONAME,NONAME
+019524 NONAME,NONAME
+019631 NONAME,NONAME
+026067 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB564  AGP1225-MAD1345 / 32A ","14/11/2026","13:25","14/11/2026","14:45","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  322711 CARBO DE PITARQUE             , BERNARDO
+TCP
+---
+010069 NONAME,NONAME
+019524 NONAME,NONAME
+019631 NONAME,NONAME
+026067 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"Firma 07:40 Pairing 3600","17/11/2026","07:40","17/11/2026","08:40","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"IB791  MAD0740-VIE1040 / 320 ","17/11/2026","08:40","17/11/2026","11:40","Falso","Verdadero","16/11/2026","19:40",,,,,,,"
+TECNICOS
+--------
+CT->E  229611 PACIENCIA BAÑARES             , JOSE DANIEL
+TCP
+---
+015546 NONAME,NONAME
+019157 NONAME,NONAME
+026340 NONAME,NONAME
+081955 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB798  VIE0605-MAD0915 / 32A ","18/11/2026","07:05","18/11/2026","10:15","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  229611 PACIENCIA BAÑARES             , JOSE DANIEL
+TCP
+---
+015546 NONAME,NONAME
+019157 NONAME,NONAME
+026340 NONAME,NONAME
+081955 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB545  MAD1025-OPO1145 / 32A +O","18/11/2026","11:25","18/11/2026","12:45","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  229611 PACIENCIA BAÑARES             , JOSE DANIEL
+TCP
+---
+015546 NONAME,NONAME
+019157 NONAME,NONAME
+026340 NONAME,NONAME
+081955 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB546  OPO1225-MAD1345 / 32A ","18/11/2026","13:25","18/11/2026","14:45","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  229611 PACIENCIA BAÑARES             , JOSE DANIEL
+TCP
+---
+015546 NONAME,NONAME
+019157 NONAME,NONAME
+026340 NONAME,NONAME
+081955 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"Firma 05:45 Pairing 3495","19/11/2026","05:45","19/11/2026","06:45","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"IB711  MAD0545-LHR0825 / 320 ","19/11/2026","06:45","19/11/2026","09:25","Falso","Verdadero","18/11/2026","17:45",,,,,,,"
+TECNICOS
+--------
+CT->E  975589 USERO GOMARIZ                 , CARLOS
+TCP
+---
+017473 NONAME,NONAME
+017476 NONAME,NONAME
+026980 NONAME,NONAME
+F00020 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB712  LHR0915-MAD1150 / 320 A+","19/11/2026","10:15","19/11/2026","12:50","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  975589 USERO GOMARIZ                 , CARLOS
+TCP
+---
+017473 NONAME,NONAME
+017476 NONAME,NONAME
+026980 NONAME,NONAME
+F00020 NONAME,NONAME
+---
+Comida en Aeropuerto despues del vuelo
+","",,"Normal","Falso","Normal","2"
+"XA - DIA LIBRE PENDIENTE","22/11/2026","00:01","22/11/2026","23:59","Verdadero","Falso",,,,,,,,,,,"Normal","Falso","Normal","2"
+"X - DIA LIBRE","23/11/2026","00:01","26/11/2026","23:59","Verdadero","Falso",,,,,,,,,,,"Normal","Falso","Normal","2"
+"Firma 06:10 Pairing 3177","28/11/2026","06:10","28/11/2026","07:10","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"IB527  MAD0610-AGP0730 / 32A ","28/11/2026","07:10","28/11/2026","08:30","Falso","Verdadero","27/11/2026","18:10",,,,,,,"
+TECNICOS
+--------
+CT->E  277664 LACAMARA GARCIA               , JORGE
+TCP
+---
+019594 NONAME,NONAME
+026347 NONAME,NONAME
+027206 NONAME,NONAME
+640393 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB528  AGP0810-MAD0930 / 32A ","28/11/2026","09:10","28/11/2026","10:30","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  277664 LACAMARA GARCIA               , JORGE
+TCP
+---
+019594 NONAME,NONAME
+026347 NONAME,NONAME
+027206 NONAME,NONAME
+640393 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB545  MAD1025-OPO1145 / 32A +O","28/11/2026","11:25","28/11/2026","12:45","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  277664 LACAMARA GARCIA               , JORGE
+TCP
+---
+019594 NONAME,NONAME
+026347 NONAME,NONAME
+027206 NONAME,NONAME
+640393 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB546  OPO1225-MAD1345 / 32A ","28/11/2026","13:25","28/11/2026","14:45","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  277664 LACAMARA GARCIA               , JORGE
+TCP
+---
+019594 NONAME,NONAME
+026347 NONAME,NONAME
+027206 NONAME,NONAME
+640393 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"Firma 05:30 Pairing 3271","29/11/2026","05:30","29/11/2026","06:30","Falso","Falso",,,,,,,,,,,"","Normal","Falso","Normal","2"
+"IB569  MAD0530-ORY0735 / 320 ","29/11/2026","06:30","29/11/2026","08:35","Falso","Verdadero","28/11/2026","17:30",,,,,,,"
+TECNICOS
+--------
+CT->E  329696 LOPEZ BLANCO                  , JOAQUIN ALBERTO
+TCP
+---
+017445 NONAME,NONAME
+019241 NONAME,NONAME
+027188 NONAME,NONAME
+982859 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB570  ORY0825-MAD1030 / 320 ","29/11/2026","09:25","29/11/2026","11:30","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  329696 LOPEZ BLANCO                  , JOAQUIN ALBERTO
+TCP
+---
+017445 NONAME,NONAME
+019241 NONAME,NONAME
+027188 NONAME,NONAME
+982859 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"
+"IB773  MAD1110-HAM1410 / 320 +O","29/11/2026","12:10","29/11/2026","15:10","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  329696 LOPEZ BLANCO                  , JOAQUIN ALBERTO
+TCP
+---
+017445 NONAME,NONAME
+019241 NONAME,NONAME
+027188 NONAME,NONAME
+982859 NONAME,NONAME
+---
+Comida de Tripulacion embarcada
+","",,"Normal","Falso","Normal","2"
+"IB778  HAM0550-MAD0855 / 320 ","30/11/2026","06:50","30/11/2026","09:55","Falso","Falso",,,,,,,,,"
+TECNICOS
+--------
+CT->E  329696 LOPEZ BLANCO                  , JOAQUIN ALBERTO
+TCP
+---
+017445 NONAME,NONAME
+019241 NONAME,NONAME
+027188 NONAME,NONAME
+982859 NONAME,NONAME
+---
+","",,"Normal","Falso","Normal","2"

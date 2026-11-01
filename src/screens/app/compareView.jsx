@@ -33,6 +33,13 @@ const formatTime = (value) =>
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+const formatDateTime = (value) =>
+  new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 const labels = {
   arrival_to_firma: "Llegada y firma",
   arrival_to_departure: "Llegada y salida",
@@ -86,6 +93,9 @@ function MatchCard({ group }) {
                 Solapamiento: {match.distanceMinutes} min
               </span>
             </div>
+            <p className="mt-1 text-xs text-slate-500">
+              {formatDateTime(match.startedAt)} → {formatDateTime(match.endedAt)}
+            </p>
             <button
               className="mt-2 text-xs font-semibold text-blue-700"
               onClick={() => setExpanded((value) => !value)}
@@ -97,8 +107,12 @@ function MatchCard({ group }) {
                 {match.participants.map((person) => (
                   <div key={person.id}>
                     <p className="font-medium">
-                      {person.username} · {person.role} a las{" "}
-                      {formatTime(person.at)}
+                      {person.username} · {person.continuedIntoMatch ? "ya estaba allí" : person.role}
+                      {person.continuedIntoMatch && (
+                        <span className="font-normal text-slate-500">
+                          {" "}desde {formatDateTime(person.presenceStartedAt)}
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-slate-500">
                       {person.flightNumber || "Actividad"} · {person.route}
@@ -209,7 +223,7 @@ function AddFriendModal({ open, onClose }) {
   );
 }
 
-function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange }) {
+function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile }) {
   const [friends, setFriends] = useState([]);
   const [selected, setSelected] = useState([]);
   const [friendEvents, setFriendEvents] = useState([]);
@@ -260,8 +274,9 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange }) {
         mode,
         month,
         year,
+        baseIata: profile?.base,
       }),
-    [schedule, friendEvents, mode, month, year],
+    [schedule, friendEvents, mode, month, year, profile?.base],
   );
   const allGroups = useMemo(() => groupFriendMatches(matches), [matches]);
   const groups = activeGroup
