@@ -102,12 +102,15 @@ export function Slab({
   timeZone,
 }) {
   const s = activityStyles[event.situated ? "situated" : event.type];
+  const slabStyle = event.calendarColor
+    ? event.calendarColor[theme === "dark" ? "dark" : "light"]
+    : theme === "dark" ? s.dark : s.light;
   const dayIndicator = getEventDayIndicator(event, timeZone);
   const showsTime = !compact || showTime;
   return (
     <button
       onClick={onClick}
-      className={`slab flex w-full flex-col justify-center overflow-hidden rounded-[8px] border px-0.5 py-1 text-center transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${showsTime ? "min-h-[36px]" : "min-h-[22px]"} ${theme === "dark" ? s.dark : s.light}`}
+      className={`slab flex w-full flex-col justify-center overflow-hidden rounded-[8px] border px-0.5 py-1 text-center transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${showsTime ? "min-h-[36px]" : "min-h-[22px]"} ${slabStyle}`}
     >
       <div className="slab__label whitespace-nowrap font-extrabold leading-tight tracking-wide">
         {event.situated ? `[${event.label}]` : event.label}
@@ -298,6 +301,13 @@ export function CalendarView({
     },
     {},
   );
+  Object.values(eventsByVisibleDay).forEach((dayEvents) => {
+    dayEvents.sort((left, right) => {
+      const leftTime = Date.parse(left.startsAt || left.firmaAt || "") || 0;
+      const rightTime = Date.parse(right.startsAt || right.firmaAt || "") || 0;
+      return leftTime - rightTime;
+    });
+  });
   const todayKey = `${today.year}-${today.month}-${today.day}`;
   const agendaDays = Array.from(
     new Set(Object.keys(eventsByVisibleDay)),
@@ -608,9 +618,9 @@ export function CalendarView({
                     </div>
                   )}
                 </div>
-                {selected.desc && (
+                {(selected.desc || selected.description) && (
                   <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
-                    {selected.desc}
+                    {selected.desc || selected.description}
                   </h3>
                 )}
               </div>

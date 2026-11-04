@@ -327,7 +327,7 @@ export default function App() {
               />
             )}{" "}
             {active === "compare" && (
-              <CompareView userId={session?.user?.id} profile={profile} schedule={schedule} schedulePeriod={schedulePeriod} onPeriodChange={setSchedulePeriod} onBack={() => setActive("calendar")} />
+              <CompareView userId={session?.user?.id} profile={profile} schedule={schedule} schedulePeriod={schedulePeriod} onPeriodChange={setSchedulePeriod} onBack={() => setActive("calendar")} theme={theme} timeZone={displayTimeZone} />
             )}{" "}
             {active === "summary" && (
               <SummaryView
