@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  Check,
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
@@ -18,6 +19,7 @@ import {
   loadFriendSchedule,
   loadFriendships,
   removeFriend,
+  respondToFriendRequest,
   searchProfiles,
   sendFriendRequest,
 } from "../../lib/scheduleService";
@@ -166,6 +168,7 @@ function AddFriendModal({ open, onClose }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sendingId, setSendingId] = useState(null);
 
   if (!open) return null;
 
@@ -176,14 +179,16 @@ function AddFriendModal({ open, onClose }) {
     setError("");
     try {
       setResults(await searchProfiles(query));
-    } catch {
-      setError("No se ha podido realizar la búsqueda.");
+    } catch (searchError) {
+      setError(searchError.message || "No se ha podido realizar la búsqueda.");
     } finally {
       setLoading(false);
     }
   };
 
   const add = async (id) => {
+    setSendingId(id);
+    setError("");
     try {
       await sendFriendRequest(id);
       setResults((items) =>
@@ -193,6 +198,8 @@ function AddFriendModal({ open, onClose }) {
       );
     } catch (e) {
       setError(e.message || "No se ha podido enviar la solicitud.");
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -242,8 +249,9 @@ function AddFriendModal({ open, onClose }) {
                 <Button
                   className="!min-h-9 !px-3"
                   onClick={() => add(user.id)}
+                  disabled={sendingId === user.id}
                 >
-                  Añadir
+                  {sendingId === user.id ? <LoaderCircle size={16} className="animate-spin" /> : "Añadir"}
                 </Button>
               )}
             </div>
@@ -256,6 +264,8 @@ function AddFriendModal({ open, onClose }) {
 
 function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile, theme = "light", timeZone = "UTC" }) {
   const [friends, setFriends] = useState([]);
+  const [receivedRequests, setReceivedRequests] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
   const [selected, setSelected] = useState([]);
   const [friendEvents, setFriendEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -264,6 +274,7 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
   const [mode, setMode] = useState("any");
   const [activeGroup, setActiveGroup] = useState(null);
   const [removing, setRemoving] = useState(null);
+  const [responding, setResponding] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarUserIds, setCalendarUserIds] = useState([]);
@@ -277,10 +288,30 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
 
   useEffect(() => {
     loadFriendships()
-      .then((network) => setFriends(network.friends || []))
+      .then((network) => {
+        setFriends(network.friends || []);
+        setReceivedRequests(network.received || []);
+        setSentRequests(network.sent || []);
+      })
       .catch(() => setError("No se han podido cargar tus amistades."))
       .finally(() => setLoading(false));
   }, []);
+
+  const respondToRequest = async (request, status) => {
+    setResponding(request.id);
+    setError("");
+    try {
+      await respondToFriendRequest(request.id, status);
+      const network = await loadFriendships();
+      setFriends(network.friends || []);
+      setReceivedRequests(network.received || []);
+      setSentRequests(network.sent || []);
+    } catch (requestError) {
+      setError(requestError.message || "No se ha podido responder a la solicitud.");
+    } finally {
+      setResponding(null);
+    }
+  };
 
   useEffect(() => {
     if (!selected.length) {
@@ -475,6 +506,53 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
         <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </p>
+      )}
+      {(receivedRequests.length > 0 || sentRequests.length > 0) && (
+        <section className="mt-6 rounded-[24px] border border-black/[.07] bg-white p-5 dark:border-white/[.1] dark:bg-[#14171A]">
+          <h2 className="font-semibold">Solicitudes de amistad</h2>
+          {receivedRequests.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recibidas</p>
+              {receivedRequests.map((request) => (
+                <div key={request.id} className="flex items-center justify-between gap-3 rounded-xl border border-black/[.06] p-3 dark:border-white/[.08]">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">@{request.username}</p>
+                    <p className="text-xs text-slate-500">{request.airline} · {request.base_city || request.base}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      onClick={() => respondToRequest(request, "accepted")}
+                      disabled={responding === request.id}
+                      aria-label={`Aceptar solicitud de @${request.username}`}
+                      className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-emerald-700 disabled:opacity-50 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    >
+                      {responding === request.id ? <LoaderCircle size={17} className="animate-spin" /> : <Check size={18} />}
+                    </button>
+                    <button
+                      onClick={() => respondToRequest(request, "rejected")}
+                      disabled={responding === request.id}
+                      aria-label={`Rechazar solicitud de @${request.username}`}
+                      className="grid h-9 w-9 place-items-center rounded-full bg-red-50 text-red-600 disabled:opacity-50 dark:bg-red-950/40 dark:text-red-300"
+                    >
+                      <X size={17} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {sentRequests.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Enviadas</p>
+              {sentRequests.map((request) => (
+                <div key={request.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-sm dark:bg-white/[.04]">
+                  <span className="font-medium">@{request.username}</span>
+                  <span className="text-xs text-slate-500">Pendiente de respuesta</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       )}
       {friends.length ? (
         <div className="mt-8 space-y-8">
