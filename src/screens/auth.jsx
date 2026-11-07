@@ -213,21 +213,6 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
     onContinue();
   };
 
-  const continueWithGoogle = async () => {
-    setAuthError("");
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-
-    if (error) {
-      setAuthError(error.message);
-    }
-  };
-
   /*
    * PANTALLA DESPUÉS DE ENVIAR EL CORREO
    */
@@ -558,29 +543,6 @@ export function Login({ onContinue, theme, setTheme, initialMode = "signIn" }) {
                 </Button>
               )}
             </div>
-
-            {mode !== "recover" && mode !== "updatePassword" && (
-              <>
-                <div className="my-5 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
-
-                  <span className="text-xs text-slate-400">o</span>
-
-                  <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
-                </div>
-
-                <Button
-                  variant="secondary"
-                  onClick={continueWithGoogle}
-                  className="w-full"
-                >
-                  <span className="grid h-5 w-5 place-items-center rounded-full bg-white text-[13px] font-bold text-blue-600 shadow-sm">
-                    G
-                  </span>
-                  Continuar con Google
-                </Button>
-              </>
-            )}
 
             {mode !== "updatePassword" && (
               <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">

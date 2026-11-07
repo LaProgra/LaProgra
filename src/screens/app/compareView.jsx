@@ -58,6 +58,29 @@ const calendarColorPalette = [
   { light: "bg-rose-50 border-rose-300 text-rose-950", dark: "bg-rose-950/70 border-rose-700 text-rose-100" },
 ];
 
+function MonthSelector({ monthLabel, onPrevious, onNext }) {
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <button
+        onClick={onPrevious}
+        aria-label="Mes anterior"
+        className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
+      >
+        <ChevronLeft size={19} />
+      </button>
+      <h2 className="min-w-[170px] text-center text-lg font-semibold capitalize">
+        {monthLabel}
+      </h2>
+      <button
+        onClick={onNext}
+        aria-label="Mes siguiente"
+        className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
+      >
+        <ChevronRight size={19} />
+      </button>
+    </div>
+  );
+}
 function MatchCard({ group }) {
   const [expanded, setExpanded] = useState(false);
   const free = group.locationType === "free";
@@ -482,25 +505,6 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
         <p className="mt-2 text-slate-500">
           Encuentra coincidencias con tus amistades.
         </p>
-        <div className="mt-3 flex items-center gap-1">
-          <button
-            onClick={() => changeMonth(-1)}
-            aria-label="Mes anterior"
-            className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
-          >
-            <ChevronLeft size={19} />
-          </button>
-          <h2 className="min-w-[170px] text-center text-lg font-semibold capitalize">
-            {monthLabel}
-          </h2>
-          <button
-            onClick={() => changeMonth(1)}
-            aria-label="Mes siguiente"
-            className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
-          >
-            <ChevronRight size={19} />
-          </button>
-        </div>
       </header>
       {error && (
         <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -556,6 +560,11 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
       )}
       {friends.length ? (
         <div className="mt-8 space-y-8">
+          <MonthSelector
+            monthLabel={monthLabel}
+            onPrevious={() => changeMonth(-1)}
+            onNext={() => changeMonth(1)}
+          />
           <section>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
               Comparar con
