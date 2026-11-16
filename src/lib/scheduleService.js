@@ -8,8 +8,8 @@ import { getDateInTimeZone, zonedDateTimeToUtc } from "./timeZone";
 export const MATCH_CATEGORIES = {
   flight: "En vuelo", // misma tripulación en el mismo vuelo
   airport: "Escala", // coinciden en un aeropuerto (firma o llegada)
-  city: "Posible", // misma ciudad, sin confirmar que se vean
-  free: "Seguro", // días libres compartidos
+  city: "Posible", // misma ciudad, disponibilidad incierta
+  safe: "Segura", // misma ciudad y ambos disponibles
 };
 
 const normalizeFlightNumber = (value) =>
@@ -167,8 +167,15 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
       if (durationMinutes < minimumMinutes) return;
       // Una coincidencia de ciudad de más de 24 h debe resolverse mediante los
       // días libres compartidos, no mostrarse como una ventana "Posible".
-      if (locationType === "city" && durationMinutes > 24 * 60) return;
-      const type = locationType === "airport" ? "operational_airport" : "possible_city";
+      const safeCity = locationType === "city"
+        && !hasBlockingActivity(left.user, overlapStart, overlapEnd, timeZone)
+        && !hasBlockingActivity(right.user, overlapStart, overlapEnd, timeZone);
+      const type = locationType === "airport"
+        ? "operational_airport"
+        : safeCity ? "safe_city" : "possible_city";
+      const matchLocationType = locationType === "airport"
+        ? "airport"
+        : safeCity ? "safe" : "city";
       const place = locationType === "airport" ? left.airportIata : left.city;
       const participants = [left, right].map((presence) => ({
         id: presence.user.id,
@@ -181,12 +188,15 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
         continuedIntoMatch: presence.startAt < overlapStart,
         flightNumber: presence.event.flightNumber || presence.event.legs?.[0]?.flightNumber || "",
         route: presence.event.label || "",
+        airportIata: presence.airportIata,
+        startEvent: presence.event,
+        endEvent: findBoundaryEvent(presence.user, overlapEnd),
       }));
       const key = `${type}|${[left.user.id, right.user.id].sort().join("|")}|${[left.eventKey, right.eventKey].sort().join("|")}|${place}|${overlapStart}`;
       const candidate = {
         type,
-        locationType,
-        confidence: locationType === "airport" ? "operational" : "possible",
+        locationType: matchLocationType,
+        confidence: locationType === "airport" ? "operational" : safeCity ? "certain" : "possible",
         airportIata: locationType === "airport" ? left.airportIata : null,
         airportCity: locationType === "airport" ? getAirportCity(left.airportIata) : left.city,
         city: left.city || right.city,
@@ -280,7 +290,13 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
       events: members.map(({ flight }) => flight.event),
     });
   });
-  const freeByUser = users.map((user) => {
+  return matches
+    .filter((match) => options.mode !== "all" || users.every((user) => match.users.some((matchUser) => matchUser.id === user.id)))
+    .sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt));
+
+  /* Legacy day-by-day free matching is intentionally disabled. Safe city
+     intervals now cover continuous availability across midnight. */
+  /* const freeByUser = users.map((user) => {
     const byDay = new Map();
     const daysInMonth = new Date(options.year, options.month, 0).getDate();
     for (let day = 1; day <= daysInMonth; day += 1) byDay.set(`${options.year}-${String(options.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`, { programmed: false });
@@ -337,7 +353,7 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
     }));
   });
   const result = matches.filter((match) => match.type === "shared_free_day" || options.mode !== "all" || users.every((user) => match.users.some((matchUser) => matchUser.id === user.id))).sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt));
-  return result;
+  return result; */
 }
 
 function buildUserPresences(user, periodStart, periodEnd) {
@@ -434,6 +450,37 @@ function buildUserPresences(user, periodStart, periodEnd) {
   return { airport, city, flights };
 }
 
+function hasBlockingActivity(user, startAt, endAt, timeZone) {
+  return (user.events || []).some((event) => {
+    if (!isProgrammedActivity(event)) return false;
+    let activityStart;
+    let activityEnd;
+    if (event.startsAt) {
+      activityStart = new Date(event.startsAt).getTime();
+      activityEnd = event.endsAt
+        ? new Date(event.endsAt).getTime()
+        : activityStart + 24 * 60 * 60 * 1000;
+    } else if (event.year && event.month && event.day) {
+      const next = new Date(Date.UTC(event.year, event.month - 1, event.day + 1));
+      activityStart = new Date(zonedDateTimeToUtc({ year: event.year, month: event.month, day: event.day }, "00:00", timeZone)).getTime();
+      activityEnd = new Date(zonedDateTimeToUtc({ year: next.getUTCFullYear(), month: next.getUTCMonth() + 1, day: next.getUTCDate() }, "00:00", timeZone)).getTime();
+    }
+    return Number.isFinite(activityStart)
+      && Number.isFinite(activityEnd)
+      && activityStart < endAt
+      && activityEnd > startAt;
+  });
+}
+
+function findBoundaryEvent(user, boundaryAt) {
+  return (user.events || []).find((event) => {
+    const times = [event.firmaAt, event.startsAt]
+      .filter(Boolean)
+      .map((value) => new Date(value).getTime());
+    return times.some((time) => Math.abs(time - boundaryAt) < 60 * 1000);
+  }) || { label: "Siguiente actividad", type: "duty" };
+}
+
 function eventDateKeys(event, timeZone) {
   if (!event.startsAt || !event.endsAt) {
     return event.year && event.month && event.day
@@ -502,16 +549,17 @@ function legacyGroupFriendMatches(matches) {
 export function groupFriendMatches(matches) {
   const groups = new Map();
   matches.forEach((match) => {
-    const locationType = match.type === "shared_free_day" ? "free" : match.locationType || "airport";
+    const locationType = match.locationType || "airport";
     const place =
       locationType === "airport" ? match.airportIata
-      : locationType === "city" ? match.city
+      : ["city", "safe"].includes(locationType) ? match.city
       : locationType === "flight" ? match.flightNumber
       : "FREE";
     const key = `${match.startedAt.slice(0, 10)}|${locationType}|${place || "unknown"}`;
     if (!groups.has(key)) groups.set(key, {
       key,
       date: match.startedAt.slice(0, 10),
+      dateEnd: match.endedAt.slice(0, 10),
       airportIata: match.airportIata,
       airportCity: match.airportCity,
       city: match.city,
@@ -532,16 +580,7 @@ export function groupFriendMatches(matches) {
     const previous = merged[merged.length - 1];
     const participants = group.matches[0]?.participants?.map((person) => person.id).sort().join(",");
     const previousParticipants = previous?.matches[0]?.participants?.map((person) => person.id).sort().join(",");
-    const mergeFreeDay = previous?.locationType === "free"
-      && group.locationType === "free"
-      && participants === previousParticipants
-      && dayIndex(group.date) - dayIndex(previous.dateEnd || previous.date) === 1;
-    if (mergeFreeDay) {
-      previous.dateEnd = group.date;
-      previous.matches.push(...group.matches);
-    } else {
-      merged.push({ ...group, dateEnd: group.date });
-    }
+    merged.push({ ...group, dateEnd: group.dateEnd || group.date });
   });
   return merged;
 }

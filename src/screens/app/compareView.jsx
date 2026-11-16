@@ -64,9 +64,22 @@ const formatDateTime = (value) =>
 const formatDuration = (value) => {
   const minutes = Math.max(0, Math.round(Number(value) || 0));
   if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
   const remainingMinutes = minutes % 60;
+  if (days > 0) {
+    const dayLabel = `${days} ${days === 1 ? "día" : "días"}`;
+    return hours ? `${dayLabel} ${hours} h` : dayLabel;
+  }
   return remainingMinutes ? `${hours} h ${remainingMinutes} min` : `${hours} h`;
+};
+
+const eventSummary = (event) => {
+  if (!event) return "actividad";
+  const route = event.label && /^[A-Z]{3}-[A-Z]{3}$/i.test(event.label)
+    ? event.label
+    : event.flightNumber || event.label;
+  return route || event.desc || event.description || "actividad";
 };
 
 // "12 oct" o, para rangos, "12 - 15 oct" (o "30 sep - 2 oct" si cambia el mes)
@@ -82,6 +95,7 @@ const labels = {
   same_flight: "Misma tripulación en vuelo",
   operational_airport: "Ventana operativa en aeropuerto",
   possible_city: "Posible coincidencia en la ciudad",
+  safe_city: "Coincidencia segura en la ciudad",
 };
 
 /* Una paleta única para toda la pantalla: la misma persona tiene el mismo
@@ -160,8 +174,8 @@ const cardClass =
 
 /* Tipo de coincidencia a partir de su grupo / marcador. */
 const kindOf = (item) =>
-  item.free
-    ? "free"
+  item.safe
+    ? "safe"
     : item.flight
       ? "flight"
       : item.possible
@@ -261,9 +275,9 @@ function Legend({ kinds }) {
       tone: "text-amber-600 dark:text-amber-300",
     },
     {
-      kind: "free",
+      kind: "safe",
       icon: LucideSmile,
-      label: MATCH_CATEGORIES.free,
+      label: MATCH_CATEGORIES.safe,
       tone: "text-emerald-600 dark:text-emerald-300",
     },
   ].filter((item) => kinds.has(item.kind));
@@ -311,31 +325,35 @@ function SkeletonCards() {
 /* ───────────── Coincidencias ───────────── */
 
 /* Cada coincidencia gestiona su propio "expandido", así no se abren todas a la vez. */
-function MatchDetail({ match, possible, colorFor }) {
+function MatchDetail({ match, possible, safe, colorFor }) {
   const [expanded, setExpanded] = useState(false);
   const inFlight = match.locationType === "flight";
   return (
     <div className="mt-3 rounded-xl bg-white/80 p-3 text-sm dark:bg-white/[.06]">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="hidden">
         <p className="font-semibold">{labels[match.type] || "Coincidencia"}</p>
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
             inFlight
               ? "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200"
-              : possible
+              : safe
+                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+                : possible
                 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
                 : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200"
           }`}
         >
           {inFlight
             ? MATCH_CATEGORIES.flight
-            : possible
-              ? MATCH_CATEGORIES.city
-              : MATCH_CATEGORIES.airport}{" "}
+            : safe
+              ? MATCH_CATEGORIES.safe
+              : possible
+                ? MATCH_CATEGORIES.city
+                : MATCH_CATEGORIES.airport}{" "}
           · {formatDuration(match.distanceMinutes)}
         </span>
       </div>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p className="hidden">
         {formatDateTime(match.startedAt)} → {formatDateTime(match.endedAt)}
       </p>
       <button
@@ -382,7 +400,7 @@ function MatchDetail({ match, possible, colorFor }) {
 }
 
 function MatchCard({ group, colorFor }) {
-  const free = group.locationType === "free";
+  const safe = group.locationType === "safe";
   const possible = group.locationType === "city";
   const inFlight = group.locationType === "flight";
   const people = [
@@ -396,9 +414,17 @@ function MatchCard({ group, colorFor }) {
     group.date === group.dateEnd
       ? formatDate(group.date)
       : `${formatDate(group.date)} - ${formatDate(group.dateEnd)}`;
+  const primaryMatch = group.matches[0];
+  const categoryLabel = safe
+    ? MATCH_CATEGORIES.safe
+    : inFlight
+      ? MATCH_CATEGORIES.flight
+      : possible
+        ? MATCH_CATEGORIES.city
+        : MATCH_CATEGORIES.airport;
 
-  const Icon = free ? Sun : inFlight ? Plane : MapPin;
-  const tone = free
+  const Icon = safe ? LucideSmile : possible ? FaceNeutral : inFlight ? Plane : TowerControl;
+  const tone = safe
     ? {
         card: "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/25",
         icon: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200",
@@ -418,15 +444,15 @@ function MatchCard({ group, colorFor }) {
             icon: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200",
           };
 
-  const title = free
-    ? "Días libres compartidos"
-    : inFlight
-      ? `${group.flightNumber} · ${group.route || MATCH_CATEGORIES.flight}`
-      : possible
-        ? `${group.city} · Posible coincidencia`
-        : `${group.airportIata} · ${group.airportCity}`;
+  // const title = safe
+  //   ? `Seguro que os veis en ${group.city || "la ciudad"}`
+  //   : inFlight
+  //     ? `${group.flightNumber} · ${group.route || MATCH_CATEGORIES.flight}`
+  //     : possible
+  //       ? `Posible coincidencia en ${group.city}`
+  //       : `${group.airportIata} · ${group.airportCity}`;
   return (
-    <article className={`rounded-2xl border p-4 ${tone.card}`}>
+    <article className={`relative rounded-2xl border p-4 ${tone.card}`}>
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
@@ -434,11 +460,15 @@ function MatchCard({ group, colorFor }) {
         >
           <Icon size={18} />
         </span>
-        <div className="min-w-0">
-          <p className="font-semibold">{title}</p>
-          <p className="mt-0.5 text-xs capitalize text-slate-600 dark:text-slate-300">
+        <div className="min-w-0 flex-1">
+          {/* <p className="font-semibold">{title}</p> */}
+          {/* <p className="mt-0.5 text-xs capitalize text-slate-600 dark:text-slate-300">
             {range}
-          </p>
+          </p> */}
+          <p className="font-semibold">{range}</p>
+          <span className="absolute right-4 top-4 inline-flex rounded-full bg-white/70 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-white/[.08] dark:text-slate-200">
+            Duración · {formatDuration(primaryMatch?.distanceMinutes)}
+          </span>
         </div>
       </div>
 
@@ -459,22 +489,68 @@ function MatchCard({ group, colorFor }) {
       </ul>
 
       {possible && (
-        <p className="mt-3 text-xs text-amber-800 dark:text-amber-200">
+        <p className="hidden">
           Ubicación estimada por vuelos; no confirma que puedan quedar en
           persona.
         </p>
       )}
 
-      {free ? (
-        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          Ninguno tiene actividad programada durante este intervalo.
-        </p>
+      {safe ? (
+        <>
+        <div className="mt-3 rounded-xl bg-white/80 p-3 text-sm dark:bg-white/[.06]">
+          {group.matches.flatMap((match) => match.participants).map((person) => (
+            <div key={person.id} className="mb-3 last:mb-0">
+              <p className="font-medium">
+                @{person.username}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Inicio: {eventSummary(person.startEvent || person.event)}
+                {" · "}
+                Fin: {eventSummary(person.endEvent)}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="hidden">
+          {group.matches.map((match, index) => (
+            <div key={`${match.startedAt}-${index}`}>
+              <p className="font-semibold text-emerald-800 dark:text-emerald-200">
+                Intervalo: {formatDateTime(match.startedAt)} - {formatDateTime(match.endedAt)}
+              </p>
+              <p>Ambos están en {group.city || "la misma ciudad"} y disponibles durante este intervalo.</p>
+              <p>La coincidencia termina cuando uno inicia su siguiente actividad o vuelo.</p>
+            </div>
+          ))}
+        </div>
+        <div className="hidden">
+          {group.matches.map((match, index) => (
+            <div key={`${match.startedAt}-${index}`} className="space-y-1">
+              <p className="font-semibold text-emerald-800 dark:text-emerald-200">
+                Intervalo: {formatDateTime(match.startedAt)} → {formatDateTime(match.endedAt)}
+              </p>
+              <p>Ambos están en {group.city || "la misma ciudad"} y disponibles durante este intervalo.</p>
+              <p>La coincidencia termina cuando uno inicia su siguiente actividad o vuelo.</p>
+            </div>
+          ))}
+          {group.matches.map((match, index) => (
+            <p key={`${match.startedAt}-${index}`} className="font-semibold text-emerald-800 dark:text-emerald-200">
+              Intervalo: {formatDateTime(match.startedAt)} → {formatDateTime(match.endedAt)}
+            </p>
+          ))}
+          Ambos están en la misma ciudad y disponibles durante este intervalo.
+          <p>
+            La coincidencia empieza cuando los dos estÃ¡n disponibles y termina
+            cuando uno inicia su siguiente actividad o vuelo.
+          </p>
+        </div>
+        </>
       ) : (
         group.matches.map((match, index) => (
           <MatchDetail
             key={`${match.startedAt}-${index}`}
             match={match}
             possible={possible}
+            safe={safe}
             colorFor={colorFor}
           />
         ))
@@ -486,6 +562,72 @@ function MatchCard({ group, colorFor }) {
 /* ───────────── Modal para añadir amistades ─────────────
    El estado "open" vive en el padre, así cualquier botón (cabecera o estado
    vacío) puede abrirlo. En móvil se comporta como una hoja inferior. */
+function UnifiedMatchDetail({ match, safe, colorFor }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="mt-3 rounded-xl bg-white/80 p-3 text-sm dark:bg-white/[.06]">
+      <p className="hidden">
+        {formatDateTime(match.startedAt)} → {formatDateTime(match.endedAt)}
+      </p>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((value) => !value)}
+        className={"mt-2 inline-flex items-center gap-1 rounded text-xs font-semibold text-blue-700 dark:text-blue-300 " + focusRing}
+      >
+        {expanded ? "Ocultar detalle" : "Ver vuelos y horarios"}
+        <ChevronDown size={14} className={expanded ? "rotate-180" : ""} />
+      </button>
+      {expanded && (
+        <div className="mt-3 space-y-3 border-t border-black/5 pt-3 dark:border-white/10">
+          {match.participants.map((person) => (
+            <div key={person.id} className="flex items-start gap-2.5">
+              <Avatar username={person.username} palette={colorFor(person.id)} size="sm" />
+              <div className="min-w-0">
+                <p className="font-medium">@{person.username}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {safe
+                    ? <>{person.startEvent?.type === "base" ? `Ya estaba en ${person.airportIata}` : `Llega en ${eventSummary(person.startEvent || person.event)}`} · {`Sale en ${eventSummary(person.endEvent)}`}</>
+                    : <>{person.flightNumber || "Actividad"} · {person.route}</>}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UnifiedMatchCard({ group, colorFor }) {
+  const safe = group.locationType === "safe";
+  const possible = group.locationType === "city";
+  const inFlight = group.locationType === "flight";
+  const primaryMatch = group.matches[0];
+  const category = safe ? MATCH_CATEGORIES.safe : inFlight ? MATCH_CATEGORIES.flight : possible ? MATCH_CATEGORIES.city : MATCH_CATEGORIES.airport;
+  const Icon = safe ? LucideSmile : possible ? FaceNeutral : inFlight ? Plane : TowerControl;
+  const tone = safe ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/25" : possible ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/25" : inFlight ? "border-violet-200 bg-violet-50/70 dark:border-violet-900/60 dark:bg-violet-950/25" : "border-blue-200/70 bg-blue-50/70 dark:border-blue-900/60 dark:bg-blue-950/25";
+  const iconTone = safe ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200" : possible ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200" : inFlight ? "bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-200" : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200";
+  const people = [...new Map(group.matches.flatMap((match) => match.participants).map((person) => [person.id, person])).values()];
+  return (
+    <article className={"rounded-2xl border p-4 " + tone}>
+      <div className="flex items-start gap-3">
+        <span className={"grid h-9 w-9 shrink-0 place-items-center rounded-full " + iconTone} aria-hidden="true"><Icon size={18} /></span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-semibold">{formatDateTime(primaryMatch.startedAt)} → {formatDateTime(primaryMatch.endedAt)}</p>
+            <span className="inline-flex shrink-0 rounded-full bg-white/70 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-white/[.08] dark:text-slate-200">{category} · Duración: {formatDuration(primaryMatch.distanceMinutes)}</span>
+          </div>
+        </div>
+      </div>
+      <ul className="mt-3 flex flex-wrap gap-1.5">
+        {people.map((person) => <li key={person.id} className="flex items-center gap-1.5 rounded-full bg-white/80 py-1 pl-1 pr-2.5 text-xs font-medium dark:bg-white/[.08]"><Avatar username={person.username} palette={colorFor(person.id)} size="xs" />@{person.username}</li>)}
+      </ul>
+      {group.matches.map((match, index) => <UnifiedMatchDetail key={String(match.startedAt) + "-" + index} match={match} safe={safe} colorFor={colorFor} />)}
+    </article>
+  );
+}
+
 function AddFriendModal({ open, onClose }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -822,7 +964,7 @@ function CompareBody({
 
   const markers = allGroups.map((group) => ({
     key: group.key,
-    free: group.locationType === "free",
+    safe: group.locationType === "safe",
     flight: group.locationType === "flight",
     possible: group.locationType === "city",
     label:
@@ -1285,7 +1427,7 @@ function CompareBody({
                     <Legend kinds={legendKinds} />
                     <div className="mt-3 flex flex-wrap gap-2">
                       {markers.map((marker) => {
-                        const Icon = marker.free
+                        const Icon = marker.safe
                           ? LucideSmile
                           : marker.flight
                             ? Plane
@@ -1301,14 +1443,14 @@ function CompareBody({
                             }
                             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${focusRing} ${
                               active
-                                ? marker.free
+                                  ? marker.safe
                                   ? "bg-emerald-600 text-white"
                                   : marker.flight
                                     ? "bg-violet-600 text-white"
                                     : marker.possible
                                       ? "bg-amber-600 text-white"
                                       : "bg-blue-600 text-white"
-                                : marker.free
+                                : marker.safe
                                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-300"
                                   : marker.flight
                                     ? "bg-violet-50 text-violet-700 dark:bg-violet-950/25 dark:text-violet-300"
@@ -1331,7 +1473,7 @@ function CompareBody({
                 ) : (
                   <div className="mt-5 space-y-3">
                     {groups.map((group) => (
-                      <MatchCard
+                      <UnifiedMatchCard
                         key={group.key}
                         group={group}
                         colorFor={colorFor}
