@@ -2,6 +2,33 @@ import { supabase } from "./supabaseClient";
 import { getAirportCity } from "./airports";
 import { isProgrammedActivity } from "./scheduleAnalysis";
 
+// Las cuatro categorías de coincidencia. La clave es el `locationType` que
+// usan los grupos y la interfaz.
+export const MATCH_CATEGORIES = {
+  flight: "En vuelo", // misma tripulación en el mismo vuelo
+  airport: "Escala", // coinciden en un aeropuerto (firma o llegada)
+  city: "Posible", // misma ciudad, sin confirmar que se vean
+  free: "Seguro", // días libres compartidos
+};
+
+const normalizeFlightNumber = (value) =>
+  String(value || "").toUpperCase().replace(/\s/g, "");
+
+const eventFlightNumber = (event) =>
+  normalizeFlightNumber(event?.flightNumber || event?.legs?.[0]?.flightNumber);
+
+// ¿Estas dos presencias nacen del mismo vuelo (mismo número y mismo día)?
+const sharesFlight = (a, b) => {
+  const number = eventFlightNumber(a);
+  return (
+    Boolean(number) &&
+    number === eventFlightNumber(b) &&
+    a.year === b.year &&
+    a.month === b.month &&
+    a.day === b.day
+  );
+};
+
 export async function isUsernameAvailable(username) {
   const normalized = String(username || "").trim().toLowerCase();
   const { data, error } = await supabase.rpc("is_username_available", {
@@ -127,6 +154,9 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
         ? left.airportIata && left.airportIata === right.airportIata
         : left.cityKey && left.cityKey === right.cityKey;
       if (!sameLocation) return;
+      // Si ya comparten vuelo, la coincidencia se muestra como "En vuelo" y
+      // no se repite como escala ni como posible en la ciudad.
+      if (sharesFlight(left.event, right.event)) return;
       const overlapStart = Math.max(left.startAt, right.startAt);
       const overlapEnd = Math.min(left.endAt, right.endAt);
       if (overlapEnd <= overlapStart) return;
@@ -171,6 +201,72 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
     }
   }
   matches.push(...seen.values());
+
+  // ── Coincidencias EN VUELO: misma tripulación en el mismo vuelo ──
+  // Se agrupa por número de vuelo + origen + destino + día de salida, así un
+  // vuelo con 3 o más personas genera una sola coincidencia (y el modo
+  // "Todos" funciona).
+  const flightGroups = new Map();
+  presences.forEach(({ user, flights }) => {
+    (flights || []).forEach((flight) => {
+      const number = normalizeFlightNumber(flight.flightNumber);
+      if (!number) return;
+      if (flight.arrivalAt <= periodStart || flight.departureAt >= periodEnd) return;
+
+      const origin = normalizeAirportIata(flight.originIata) || "";
+      const destination = normalizeAirportIata(flight.destinationIata) || "";
+      const day = new Date(flight.departureAt).toISOString().slice(0, 10);
+      const key = `${number}|${origin}|${destination}|${day}`;
+
+      if (!flightGroups.has(key)) {
+        flightGroups.set(key, { number, origin, destination, members: new Map() });
+      }
+      const group = flightGroups.get(key);
+      if (!group.members.has(user.id)) group.members.set(user.id, { user, flight });
+    });
+  });
+
+  flightGroups.forEach((group) => {
+    if (group.members.size < 2) return;
+
+    const members = [...group.members.values()];
+    const startAt = Math.max(...members.map(({ flight }) => flight.departureAt));
+    const endAt = Math.min(...members.map(({ flight }) => flight.arrivalAt));
+    if (endAt <= startAt) return;
+
+    const route =
+      group.origin && group.destination
+        ? `${group.origin}-${group.destination}`
+        : members[0].flight.event.label || "";
+
+    matches.push({
+      type: "same_flight",
+      locationType: "flight",
+      confidence: "certain",
+      airportIata: null,
+      airportCity: null,
+      city: null,
+      flightNumber: group.number,
+      route,
+      startedAt: new Date(startAt).toISOString(),
+      endedAt: new Date(endAt).toISOString(),
+      distanceMinutes: Math.round((endAt - startAt) / 60000),
+      participants: members.map(({ user, flight }) => ({
+        id: user.id,
+        username: user.username,
+        role: "flight",
+        event: flight.event,
+        at: new Date(startAt).toISOString(),
+        presenceStartedAt: new Date(flight.departureAt).toISOString(),
+        presenceEndedAt: new Date(flight.arrivalAt).toISOString(),
+        continuedIntoMatch: false,
+        flightNumber: group.number,
+        route,
+      })),
+      users: members.map(({ user }) => user),
+      events: members.map(({ flight }) => flight.event),
+    });
+  });
   const freeByUser = users.map((user) => {
     const byDay = new Map();
     const daysInMonth = new Date(options.year, options.month, 0).getDate();
@@ -284,7 +380,7 @@ function buildUserPresences(user, periodStart, periodEnd) {
   });
 
   addCity(cursor, periodEnd);
-  return { airport, city };
+  return { airport, city, flights };
 }
 
 function flightSegments(event) {
@@ -292,6 +388,7 @@ function flightSegments(event) {
   if (legs.length) return legs.filter((leg) => leg.departureAt && leg.arrivalAt).map((leg) => ({
     originIata: leg.originIata,
     destinationIata: leg.destinationIata,
+    flightNumber: leg.flightNumber || event.flightNumber || "",
     departureAt: leg.departureAt ? new Date(leg.departureAt).getTime() : null,
     arrivalAt: leg.arrivalAt ? new Date(leg.arrivalAt).getTime() : null,
   }));
@@ -300,6 +397,7 @@ function flightSegments(event) {
   return [{
     originIata: match[1],
     destinationIata: match[2],
+    flightNumber: event.flightNumber,
     departureAt: new Date(event.startsAt).getTime(),
     arrivalAt: new Date(event.endsAt).getTime(),
   }];
@@ -333,7 +431,11 @@ export function groupFriendMatches(matches) {
   const groups = new Map();
   matches.forEach((match) => {
     const locationType = match.type === "shared_free_day" ? "free" : match.locationType || "airport";
-    const place = locationType === "airport" ? match.airportIata : locationType === "city" ? match.city : "FREE";
+    const place =
+      locationType === "airport" ? match.airportIata
+      : locationType === "city" ? match.city
+      : locationType === "flight" ? match.flightNumber
+      : "FREE";
     const key = `${match.startedAt.slice(0, 10)}|${locationType}|${place || "unknown"}`;
     if (!groups.has(key)) groups.set(key, {
       key,
@@ -341,6 +443,8 @@ export function groupFriendMatches(matches) {
       airportIata: match.airportIata,
       airportCity: match.airportCity,
       city: match.city,
+      flightNumber: match.flightNumber,
+      route: match.route,
       locationType,
       matches: [],
     });
