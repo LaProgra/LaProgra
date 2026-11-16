@@ -588,11 +588,6 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
       )}
       {friends.length ? (
         <div className="mt-8 space-y-8">
-          <MonthSelector
-            monthLabel={monthLabel}
-            onPrevious={() => changeMonth(-1)}
-            onNext={() => changeMonth(1)}
-          />
           <section>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
               Comparar con
@@ -632,6 +627,13 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
               ))}
             </div>
           </section>
+          {selected.length > 0 && (
+            <MonthSelector
+              monthLabel={monthLabel}
+              onPrevious={() => changeMonth(-1)}
+              onNext={() => changeMonth(1)}
+            />
+          )}
           <section className="rounded-[24px] border border-black/[.07] bg-white p-5 dark:border-white/[.1] dark:bg-[#14171A]">
             <div className="flex items-center justify-between">
               <div>
