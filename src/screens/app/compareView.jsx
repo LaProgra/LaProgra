@@ -61,6 +61,14 @@ const formatDateTime = (value) =>
     minute: "2-digit",
   }).format(new Date(value));
 
+const formatDuration = (value) => {
+  const minutes = Math.max(0, Math.round(Number(value) || 0));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes ? `${hours} h ${remainingMinutes} min` : `${hours} h`;
+};
+
 // "12 oct" o, para rangos, "12 - 15 oct" (o "30 sep - 2 oct" si cambia el mes)
 const formatShortRange = (start, end) => {
   if (start === end) return formatShortDate(start);
@@ -324,7 +332,7 @@ function MatchDetail({ match, possible, colorFor }) {
             : possible
               ? MATCH_CATEGORIES.city
               : MATCH_CATEGORIES.airport}{" "}
-          · {match.distanceMinutes} min
+          · {formatDuration(match.distanceMinutes)}
         </span>
       </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -763,8 +771,9 @@ function CompareBody({
         month,
         year,
         baseIata: profile?.base,
+        timeZone,
       }),
-    [schedule, friendEvents, mode, month, year, profile?.base],
+    [schedule, friendEvents, mode, month, year, profile?.base, timeZone],
   );
   const allGroups = useMemo(() => groupFriendMatches(matches), [matches]);
 

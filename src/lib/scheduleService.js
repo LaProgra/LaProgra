@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient";
 import { getAirportCity } from "./airports";
 import { isProgrammedActivity } from "./scheduleAnalysis";
+import { getDateInTimeZone, zonedDateTimeToUtc } from "./timeZone";
 
 // Las cuatro categorías de coincidencia. La clave es el `locationType` que
 // usan los grupos y la interfaz.
@@ -142,8 +143,10 @@ export async function loadFriendSchedule(friendUserIds, month, year) {
 
 export function compareFriendSchedules(currentEvents, friendUsers, options = {}) {
   const users = [{ id: "me", username: "Tú", base: options.baseIata, events: currentEvents }, ...friendUsers];
-  const periodStart = Date.UTC(options.year, options.month - 1, 1);
-  const periodEnd = Date.UTC(options.year, options.month, 1);
+  const timeZone = options.timeZone || "Europe/Madrid";
+  const periodStart = new Date(zonedDateTimeToUtc({ year: options.year, month: options.month, day: 1 }, "00:00", timeZone)).getTime();
+  const nextMonth = new Date(Date.UTC(options.year, options.month, 1));
+  const periodEnd = new Date(zonedDateTimeToUtc({ year: nextMonth.getUTCFullYear(), month: nextMonth.getUTCMonth() + 1, day: 1 }, "00:00", timeZone)).getTime();
   const presences = users.map((user) => ({ user, ...buildUserPresences(user, periodStart, periodEnd) }));
   const matches = [];
   const seen = new Map();
@@ -162,6 +165,9 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
       if (overlapEnd <= overlapStart) return;
       const durationMinutes = Math.round((overlapEnd - overlapStart) / 60000);
       if (durationMinutes < minimumMinutes) return;
+      // Una coincidencia de ciudad de más de 24 h debe resolverse mediante los
+      // días libres compartidos, no mostrarse como una ventana "Posible".
+      if (locationType === "city" && durationMinutes > 24 * 60) return;
       const type = locationType === "airport" ? "operational_airport" : "possible_city";
       const place = locationType === "airport" ? left.airportIata : left.city;
       const participants = [left, right].map((presence) => ({
@@ -190,6 +196,13 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
         participants,
         users: [left.user, right.user],
         events: [left.event, right.event],
+        // Marca el caso en que ambos acaban de llegar a la misma ciudad.
+        sharedArrivalDay:
+          locationType === "city"
+          && left.kind === "city"
+          && right.kind === "city"
+          && new Date(left.startAt).toISOString().slice(0, 10) === new Date(right.startAt).toISOString().slice(0, 10)
+          && new Date(left.startAt).toISOString().slice(0, 10) === new Date(overlapStart).toISOString().slice(0, 10),
       };
       if (!seen.has(key) || seen.get(key).distanceMinutes < durationMinutes) seen.set(key, candidate);
     }));
@@ -272,8 +285,10 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
     const daysInMonth = new Date(options.year, options.month, 0).getDate();
     for (let day = 1; day <= daysInMonth; day += 1) byDay.set(`${options.year}-${String(options.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`, { programmed: false });
     user.events.forEach((event) => {
-      const key = `${event.year}-${String(event.month).padStart(2, "0")}-${String(event.day).padStart(2, "0")}`;
-      if (byDay.has(key) && isProgrammedActivity(event)) byDay.get(key).programmed = true;
+      if (!isProgrammedActivity(event)) return;
+      eventDateKeys(event, timeZone).forEach((key) => {
+        if (byDay.has(key)) byDay.get(key).programmed = true;
+      });
     });
     return { user, byDay };
   });
@@ -284,6 +299,42 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
     if (available.length < required || !available.some(({ user }) => user.id === "me")) return;
     const selected = options.mode === "all" ? available : available.filter(({ user }) => user.id === "me" || available.find(({ user: candidate }) => candidate.id !== "me")?.user.id === user.id);
     matches.push({ type: "shared_free_day", confidence: "strong", airportIata: null, airportCity: null, startedAt: `${day}T00:00:00.000Z`, endedAt: `${day}T23:59:59.999Z`, distanceMinutes: 0, participants: selected.map(({ user }) => ({ id: user.id, username: user.username, role: "free", event: null, at: `${day}T12:00:00.000Z`, flightNumber: "", route: "" })), users: selected.map(({ user }) => user), events: [] });
+  });
+  // Si ambos llegan el mismo día y desde el día siguiente enlazan con días
+  // libres compartidos, el día de llegada inicia directamente el intervalo
+  // "Seguro".
+  const freeParticipantsByDay = new Map(
+    matches
+      .filter((match) => match.type === "shared_free_day")
+      .map((match) => [
+        match.startedAt.slice(0, 10),
+        new Set(match.participants.map((participant) => participant.id)),
+      ]),
+  );
+  const nextIsoDay = (value) => {
+    const date = new Date(`${value}T00:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString().slice(0, 10);
+  };
+  matches.forEach((match) => {
+    if (match.type !== "possible_city" || !match.sharedArrivalDay) return;
+    const nextDayParticipants = freeParticipantsByDay.get(
+      nextIsoDay(match.startedAt.slice(0, 10)),
+    );
+    if (
+      !nextDayParticipants
+      || !match.participants.every((participant) => nextDayParticipants.has(participant.id))
+    ) return;
+    match.type = "shared_free_day";
+    match.locationType = "free";
+    match.confidence = "strong";
+    match.airportIata = null;
+    match.airportCity = null;
+    match.distanceMinutes = 0;
+    match.participants = match.participants.map((participant) => ({
+      ...participant,
+      role: "free",
+    }));
   });
   const result = matches.filter((match) => match.type === "shared_free_day" || options.mode !== "all" || users.every((user) => match.users.some((matchUser) => matchUser.id === user.id))).sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt));
   return result;
@@ -381,6 +432,27 @@ function buildUserPresences(user, periodStart, periodEnd) {
 
   addCity(cursor, periodEnd);
   return { airport, city, flights };
+}
+
+function eventDateKeys(event, timeZone) {
+  if (!event.startsAt || !event.endsAt) {
+    return event.year && event.month && event.day
+      ? [`${event.year}-${String(event.month).padStart(2, "0")}-${String(event.day).padStart(2, "0")}`]
+      : [];
+  }
+  const start = new Date(event.startsAt);
+  const end = new Date(new Date(event.endsAt).getTime() - 1);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return [];
+  const keys = [];
+  const cursor = getDateInTimeZone(timeZone, start);
+  const last = getDateInTimeZone(timeZone, end);
+  let date = new Date(Date.UTC(cursor.year, cursor.month - 1, cursor.day));
+  const lastDate = Date.UTC(last.year, last.month - 1, last.day);
+  while (date.getTime() <= lastDate) {
+    keys.push(`${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`);
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+  return keys;
 }
 
 function flightSegments(event) {
