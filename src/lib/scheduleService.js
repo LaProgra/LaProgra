@@ -78,6 +78,19 @@ export async function respondToFriendRequest(requestId, status) {
   return data;
 }
 
+export async function cancelFriendRequest(requestId) {
+  const { data, error } = await supabase.rpc("cancel_friend_request", {
+    request_id: requestId,
+  });
+  if (error) {
+    if (error.message?.includes("friend_request_not_found")) {
+      throw new Error("La solicitud ya no está pendiente.");
+    }
+    throw error;
+  }
+  return data;
+}
+
 export async function removeFriend(friendUserId) {
   const { error } = await supabase.rpc("remove_friendship", {
     friend_user_id: friendUserId,

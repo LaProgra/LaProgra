@@ -15,6 +15,7 @@ import { CalendarView } from "./calendarView";
 import { Button, Input } from "../../components/shared";
 import {
   compareFriendSchedules,
+  cancelFriendRequest,
   groupFriendMatches,
   loadFriendSchedule,
   loadFriendships,
@@ -298,6 +299,7 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
   const [activeGroup, setActiveGroup] = useState(null);
   const [removing, setRemoving] = useState(null);
   const [responding, setResponding] = useState(null);
+  const [cancelling, setCancelling] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarUserIds, setCalendarUserIds] = useState([]);
@@ -333,6 +335,22 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
       setError(requestError.message || "No se ha podido responder a la solicitud.");
     } finally {
       setResponding(null);
+    }
+  };
+
+  const cancelRequest = async (request) => {
+    setCancelling(request.id);
+    setError("");
+    try {
+      await cancelFriendRequest(request.id);
+      const network = await loadFriendships();
+      setFriends(network.friends || []);
+      setReceivedRequests(network.received || []);
+      setSentRequests(network.sent || []);
+    } catch (requestError) {
+      setError(requestError.message || "No se ha podido retirar la solicitud.");
+    } finally {
+      setCancelling(null);
     }
   };
 
@@ -549,9 +567,19 @@ function CompareBody({ onBack, schedule, schedulePeriod, onPeriodChange, profile
             <div className="mt-4 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Enviadas</p>
               {sentRequests.map((request) => (
-                <div key={request.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-sm dark:bg-white/[.04]">
-                  <span className="font-medium">@{request.username}</span>
-                  <span className="text-xs text-slate-500">Pendiente de respuesta</span>
+                <div key={request.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-sm dark:bg-white/[.04]">
+                  <div className="min-w-0">
+                    <span className="font-medium">@{request.username}</span>
+                    <span className="ml-2 text-xs text-slate-500">Pendiente de respuesta</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => cancelRequest(request)}
+                    disabled={cancelling === request.id}
+                    className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/30"
+                  >
+                    {cancelling === request.id ? <LoaderCircle size={15} className="animate-spin" /> : "Retirar"}
+                  </button>
                 </div>
               ))}
             </div>
