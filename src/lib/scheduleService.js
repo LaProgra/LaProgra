@@ -3,13 +3,11 @@ import { getAirportCity } from "./airports";
 import { isProgrammedActivity } from "./scheduleAnalysis";
 import { getDateInTimeZone, zonedDateTimeToUtc } from "./timeZone";
 
-// Las cuatro categorías de coincidencia. La clave es el `locationType` que
-// usan los grupos y la interfaz.
+// Las tres categorías de coincidencia. La clave coincide con `locationType`.
 export const MATCH_CATEGORIES = {
-  flight: "En vuelo", // misma tripulación en el mismo vuelo
-  airport: "Escala", // coinciden en un aeropuerto (firma o llegada)
-  city: "Posible", // misma ciudad, disponibilidad incierta
-  safe: "Segura", // misma ciudad y ambos disponibles
+  flight: "En vuelo",
+  airport: "Escala",
+  city: "En ciudad",
 };
 
 const normalizeFlightNumber = (value) =>
@@ -165,17 +163,9 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
       if (overlapEnd <= overlapStart) return;
       const durationMinutes = Math.round((overlapEnd - overlapStart) / 60000);
       if (durationMinutes < minimumMinutes) return;
-      // Una coincidencia de ciudad de más de 24 h debe resolverse mediante los
-      // días libres compartidos, no mostrarse como una ventana "Posible".
-      const safeCity = locationType === "city"
-        && !hasBlockingActivity(left.user, overlapStart, overlapEnd, timeZone)
-        && !hasBlockingActivity(right.user, overlapStart, overlapEnd, timeZone);
-      const type = locationType === "airport"
-        ? "operational_airport"
-        : safeCity ? "safe_city" : "possible_city";
-      const matchLocationType = locationType === "airport"
-        ? "airport"
-        : safeCity ? "safe" : "city";
+      // La coincidencia urbana acredita presencia simultánea en la misma ciudad.
+      const type = locationType === "airport" ? "operational_airport" : "city_overlap";
+      const matchLocationType = locationType;
       const place = locationType === "airport" ? left.airportIata : left.city;
       const participants = [left, right].map((presence) => ({
         id: presence.user.id,
@@ -196,7 +186,7 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
       const candidate = {
         type,
         locationType: matchLocationType,
-        confidence: locationType === "airport" ? "operational" : safeCity ? "certain" : "possible",
+        confidence: locationType === "airport" ? "operational" : "location",
         airportIata: locationType === "airport" ? left.airportIata : null,
         airportCity: locationType === "airport" ? getAirportCity(left.airportIata) : left.city,
         city: left.city || right.city,
@@ -294,66 +284,6 @@ export function compareFriendSchedules(currentEvents, friendUsers, options = {})
     .filter((match) => options.mode !== "all" || users.every((user) => match.users.some((matchUser) => matchUser.id === user.id)))
     .sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt));
 
-  /* Legacy day-by-day free matching is intentionally disabled. Safe city
-     intervals now cover continuous availability across midnight. */
-  /* const freeByUser = users.map((user) => {
-    const byDay = new Map();
-    const daysInMonth = new Date(options.year, options.month, 0).getDate();
-    for (let day = 1; day <= daysInMonth; day += 1) byDay.set(`${options.year}-${String(options.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`, { programmed: false });
-    user.events.forEach((event) => {
-      if (!isProgrammedActivity(event)) return;
-      eventDateKeys(event, timeZone).forEach((key) => {
-        if (byDay.has(key)) byDay.get(key).programmed = true;
-      });
-    });
-    return { user, byDay };
-  });
-  const freeDays = new Set(freeByUser.flatMap(({ byDay }) => [...byDay.entries()].filter(([, value]) => !value.programmed).map(([day]) => day)));
-  freeDays.forEach((day) => {
-    const available = freeByUser.filter(({ byDay }) => byDay.get(day) && !byDay.get(day).programmed);
-    const required = options.mode === "all" ? users.length : 2;
-    if (available.length < required || !available.some(({ user }) => user.id === "me")) return;
-    const selected = options.mode === "all" ? available : available.filter(({ user }) => user.id === "me" || available.find(({ user: candidate }) => candidate.id !== "me")?.user.id === user.id);
-    matches.push({ type: "shared_free_day", confidence: "strong", airportIata: null, airportCity: null, startedAt: `${day}T00:00:00.000Z`, endedAt: `${day}T23:59:59.999Z`, distanceMinutes: 0, participants: selected.map(({ user }) => ({ id: user.id, username: user.username, role: "free", event: null, at: `${day}T12:00:00.000Z`, flightNumber: "", route: "" })), users: selected.map(({ user }) => user), events: [] });
-  });
-  // Si ambos llegan el mismo día y desde el día siguiente enlazan con días
-  // libres compartidos, el día de llegada inicia directamente el intervalo
-  // "Seguro".
-  const freeParticipantsByDay = new Map(
-    matches
-      .filter((match) => match.type === "shared_free_day")
-      .map((match) => [
-        match.startedAt.slice(0, 10),
-        new Set(match.participants.map((participant) => participant.id)),
-      ]),
-  );
-  const nextIsoDay = (value) => {
-    const date = new Date(`${value}T00:00:00.000Z`);
-    date.setUTCDate(date.getUTCDate() + 1);
-    return date.toISOString().slice(0, 10);
-  };
-  matches.forEach((match) => {
-    if (match.type !== "possible_city" || !match.sharedArrivalDay) return;
-    const nextDayParticipants = freeParticipantsByDay.get(
-      nextIsoDay(match.startedAt.slice(0, 10)),
-    );
-    if (
-      !nextDayParticipants
-      || !match.participants.every((participant) => nextDayParticipants.has(participant.id))
-    ) return;
-    match.type = "shared_free_day";
-    match.locationType = "free";
-    match.confidence = "strong";
-    match.airportIata = null;
-    match.airportCity = null;
-    match.distanceMinutes = 0;
-    match.participants = match.participants.map((participant) => ({
-      ...participant,
-      role: "free",
-    }));
-  });
-  const result = matches.filter((match) => match.type === "shared_free_day" || options.mode !== "all" || users.every((user) => match.users.some((matchUser) => matchUser.id === user.id))).sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt));
-  return result; */
 }
 
 function buildUserPresences(user, periodStart, periodEnd) {
@@ -552,7 +482,7 @@ export function groupFriendMatches(matches) {
     const locationType = match.locationType || "airport";
     const place =
       locationType === "airport" ? match.airportIata
-      : ["city", "safe"].includes(locationType) ? match.city
+      : locationType === "city" ? match.city
       : locationType === "flight" ? match.flightNumber
       : "FREE";
     const key = `${match.startedAt.slice(0, 10)}|${locationType}|${place || "unknown"}`;
