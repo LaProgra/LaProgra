@@ -303,6 +303,7 @@ export default function App() {
             timeZonePreference={profile.displayTimeZone}
             baseIata={profile.base}
             onTimeZoneChange={updateDisplayTimeZone}
+            onLogout={logout}
           />
           <main className="lg:pl-[236px]">
             {active === "calendar" && (

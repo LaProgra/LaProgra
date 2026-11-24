@@ -1,10 +1,11 @@
 import { BarChart3, CalendarDays, Settings, Users } from "lucide-react";
-import { LaPrograMark } from "../../components/shared";
+import { ProfileMenuMark } from "../../components/shared";
 
 export function TimeZoneSelector({
   timeZonePreference = "base",
   baseIata,
   onTimeZoneChange,
+  onLogout,
 }) {
   const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const isCustom = !["base", "UTC"].includes(timeZonePreference);
@@ -66,6 +67,7 @@ export function AppNav({
   timeZonePreference,
   baseIata,
   onTimeZoneChange,
+  onLogout,
 }) {
   const items = [
     ["calendar", CalendarDays, "Calendario"],
@@ -77,9 +79,7 @@ export function AppNav({
   if (desktop) {
     return (
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[236px] flex-col border-r border-black/[.06] bg-white px-4 py-5 dark:border-white/[.07] dark:bg-[#101216] lg:flex">
-        <div className="px-2">
-          <LaPrograMark />
-        </div>
+        <ProfileMenuMark onLogout={onLogout} />
         <nav className="mt-10 space-y-1">
           {items.map(([id, Icon, label]) => (
             <button

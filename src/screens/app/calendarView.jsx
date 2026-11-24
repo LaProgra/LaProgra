@@ -4,9 +4,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  BarChart3,
+
   Download,
-  LogOut,
+
   Pencil,
   Plus,
   Settings,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import airlinesCsv from "../../../airlines.csv?raw";
 import { activityStyles } from "../../data/activityStyles";
-import { LaPrograMark } from "../../components/shared";
+import { ProfileMenuMark } from "../../components/shared";
 import { downloadCalendarPdf } from "../../lib/calendarPdf";
 import {
   getEventDayIndicator,
@@ -200,7 +200,7 @@ export function CalendarView({
 }) {
   const [view, setView] = useState("mes");
   const [selected, setSelected] = useState(null);
-  const [profileMenu, setProfileMenu] = useState(false);
+
   const [showManualModal, setShowManualModal] = useState(false);
   const monthScrollRef = useRef(null);
   const monthTodayRef = useRef(null);
@@ -208,7 +208,7 @@ export function CalendarView({
   const agendaDayRefs = useRef(new Map());
   const agendaHeaderRef = useRef(null);
   const hasMountedRef = useRef(false);
-  const userInitial = (profile?.username || "U").charAt(0).toUpperCase();
+
   const selectedAirlineName = getAirlineNameFromFlightNumber(selected?.flightNumber);
   const scheduleEvents = schedule.events || schedule;
   const today = getDateInTimeZone(timeZone);
@@ -357,7 +357,14 @@ export function CalendarView({
       <div ref={view === "agenda" ? agendaHeaderRef : undefined} className={`${view === "mes" ? "shrink-0" : ""} ${view === "agenda" ? "sticky top-0 z-20 -mx-3 bg-[#F5F6F8] px-3 pb-2 pt-3 dark:bg-[#090B10] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" : ""}`}>
       <header className="flex min-h-12 items-center justify-between gap-3">
         <div className="lg:hidden">
-          <LaPrograMark compact />
+          {!readOnly && (
+            <ProfileMenuMark
+              compact
+              onOpenSummary={onOpenSummary}
+              onOpenSettings={onOpenSettings}
+              onLogout={onLogout}
+            />
+          )}
         </div>
         <div className="hidden lg:block">
           <h1 className="text-2xl font-semibold tracking-[-0.03em]">
@@ -388,50 +395,7 @@ export function CalendarView({
           >
             <Clock3 size={19} />
           </button>
-          {!readOnly && <div className="relative ml-1">
-            <button
-              onClick={() => setProfileMenu(!profileMenu)}
-              className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 text-xs font-bold text-white"
-              aria-label="Abrir menú de usuario"
-              aria-expanded={profileMenu}
-            >
-              {userInitial}
-            </button>
-            {profileMenu && (
-              <div className="absolute right-0 top-11 z-30 min-w-44 overflow-hidden rounded-[14px] border border-black/[.08] bg-white p-1 shadow-lg dark:border-white/[.1] dark:bg-[#181B20]">
-                <button
-                  onClick={() => {
-                    setProfileMenu(false);
-                    onOpenSummary?.();
-                  }}
-                  className="flex min-h-10 w-full items-center rounded-[10px] px-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[.08]"
-                >
-                  <BarChart3 size={16} className="mr-2" />
-                  Resumen
-                </button>
-                <button
-                  onClick={() => {
-                    setProfileMenu(false);
-                    onOpenSettings();
-                  }}
-                  className="flex min-h-10 w-full items-center rounded-[10px] px-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[.08]"
-                >
-                  <Settings size={16} className="mr-2" />
-                  Ajustes
-                </button>
-                <button
-                  onClick={() => {
-                    setProfileMenu(false);
-                    onLogout();
-                  }}
-                  className="flex min-h-10 w-full items-center rounded-[10px] px-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-                >
-                  <LogOut size={16} className="mr-2" />
-                  Cerrar sesión
-                </button>
-              </div>
-            )}
-          </div>}
+          
         </div>
       </header>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3 sm:mt-7">

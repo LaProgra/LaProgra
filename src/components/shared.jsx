@@ -1,7 +1,68 @@
-import { CalendarDays, CircleAlert } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { BarChart3, CalendarDays, CircleAlert, LogOut, Settings } from "lucide-react";
 
 export function LaPrograMark({ compact = false }) {
   return <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-[14px] bg-[#176BFF] text-white shadow-sm" aria-hidden="true"><CalendarDays size={21} strokeWidth={2.2}/></div>{!compact && <span className="text-[19px] font-semibold tracking-[-0.03em]">LaProgra</span>}</div>;
+}
+
+
+export function ProfileMenuMark({ compact = false, onOpenSummary, onOpenSettings, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
+
+  const menuItems = compact
+    ? [
+        { id: "summary", label: "Resumen", icon: BarChart3, onClick: onOpenSummary },
+        { id: "settings", label: "Ajustes", icon: Settings, onClick: onOpenSettings },
+        { id: "logout", label: "Cerrar sesión", icon: LogOut, onClick: onLogout, danger: true },
+      ]
+    : [
+        { id: "logout", label: "Cerrar sesión", icon: LogOut, onClick: onLogout, danger: true },
+      ];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const updatePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPosition({ top: rect.bottom + 8, left: Math.min(Math.max(12, rect.left), window.innerWidth - 204) });
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open]);
+
+  const run = (callback) => {
+    setOpen(false);
+    callback?.();
+  };
+
+  const portal = open && typeof document !== "undefined" ? createPortal(
+    <>
+      <button type="button" aria-label="Cerrar menú de usuario" onClick={() => setOpen(false)} className="fixed inset-0 z-[100] bg-black/35 backdrop-blur-[2px]" />
+      <div role="menu" aria-label="Menú de usuario" style={{ top: position.top, left: position.left }} className="fixed z-[101] w-48 overflow-hidden rounded-[14px] border border-black/[.08] bg-white p-1 shadow-2xl dark:border-white/[.1] dark:bg-[#181B20]">
+        {menuItems.map(({ id, label, icon: Icon, onClick, danger }) => (
+          <button key={id} type="button" role="menuitem" onClick={() => run(onClick)} className={`flex min-h-10 w-full items-center rounded-[10px] px-3 text-left text-sm font-semibold ${danger ? "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30" : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[.08]"}`}>
+            <Icon size={16} className="mr-2" />{label}
+          </button>
+        ))}
+      </div>
+    </>,
+    document.body,
+  ) : null;
+
+  return <>
+    <button ref={triggerRef} type="button" onClick={() => setOpen((value) => !value)} aria-label="Abrir menú de usuario" aria-haspopup="menu" aria-expanded={open} className={`flex items-center rounded-[14px] text-left transition hover:bg-black/[.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/[.07] ${compact ? "p-0.5" : "w-full p-2"}`}>
+      <LaPrograMark compact={compact} />
+    </button>
+    {portal}
+  </>;
 }
 
 export function Button({ children, onClick, variant = "primary", disabled = false, type = "button", className = "", ariaLabel }) {
