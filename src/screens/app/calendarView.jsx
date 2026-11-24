@@ -369,19 +369,6 @@ export function CalendarView({
   return (
     <div className={`${view === "mes" ? "flex h-[100dvh] flex-col overflow-hidden" : ""} mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5`}>
       <div ref={view === "agenda" ? agendaHeaderRef : undefined} className={`${view === "mes" ? "shrink-0" : ""} ${view === "agenda" ? "sticky top-0 z-20 -mx-3 bg-[#F5F6F8] px-3 pb-2 pt-3 dark:bg-[#090B10] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" : ""}`}>
-      <header className="flex min-h-12 items-center justify-between gap-3">
-        <div className="lg:hidden">
-          {!readOnly && (
-            <ProfileMenuMark
-              compact
-              onOpenSummary={onOpenSummary}
-              onOpenSettings={onOpenSettings}
-              onLogout={onLogout}
-            />
-          )}
-        </div>
-        <div />
-      </header>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3 sm:mt-7">
         <div>
           <div className="flex items-center gap-0">
