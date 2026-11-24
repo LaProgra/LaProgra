@@ -1,4 +1,5 @@
-import { BarChart3, CalendarDays, Settings, Users } from "lucide-react";
+import { useState } from "react";
+import { BarChart3, CalendarDays, Clock3, Download, Menu, Plus, Settings, Users, X } from "lucide-react";
 import { ProfileMenuMark } from "../../components/shared";
 
 export function TimeZoneSelector({
@@ -69,6 +70,7 @@ export function AppNav({
   onTimeZoneChange,
   onLogout,
 }) {
+  const [compactMenuOpen, setCompactMenuOpen] = useState(false);
   const items = [
     ["calendar", CalendarDays, "Calendario"],
     ["summary", BarChart3, "Resumen"],
@@ -101,22 +103,31 @@ export function AppNav({
     );
   }
 
+  const runCalendarAction = (action) => {
+    setCompactMenuOpen(false);
+    window.dispatchEvent(new CustomEvent(`calendar:${action}`));
+  };
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[.08] bg-white/90 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl dark:border-white/[.08] dark:bg-[#101216]/90 lg:hidden">
-      <div className="mx-auto flex max-w-md justify-around">
-        {items
-          .filter(([id]) => id === "compare")
-          .map(([id, Icon, label]) => (
-            <button
-              key={id}
-              onClick={() => setActive(id)}
-              className={`flex min-h-13 min-w-20 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active === id ? "text-[#176BFF]" : "text-slate-500 dark:text-slate-400"}`}
-            >
-              <Icon size={21} strokeWidth={active === id ? 2.5 : 2} />
-              {label}
-            </button>
-          ))}
-      </div>
-    </nav>
+    <>
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[.08] bg-white/90 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl dark:border-white/[.08] dark:bg-[#101216]/90 lg:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-3 items-center">
+          <div className="justify-self-start"><ProfileMenuMark compact onOpenSummary={() => setActive("summary")} onOpenSettings={() => setActive("settings")} onLogout={onLogout} /></div>
+          <button type="button" onClick={() => setActive("compare")} className={`flex min-h-13 min-w-20 flex-col items-center justify-center gap-1 justify-self-center rounded-xl text-[10px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active === "compare" ? "text-[#176BFF]" : "text-slate-500 dark:text-slate-400"}`}><Users size={21} strokeWidth={active === "compare" ? 2.5 : 2} />Comparar</button>
+          <button type="button" onClick={() => setCompactMenuOpen((value) => !value)} aria-label="Acciones del calendario" aria-expanded={compactMenuOpen} className="grid h-11 w-11 place-items-center justify-self-end rounded-[14px] text-slate-600 transition hover:bg-black/[.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-white/[.07]">{compactMenuOpen ? <X size={22} /> : <Menu size={23} />}</button>
+        </div>
+      </nav>
+      {compactMenuOpen && <>
+        <button type="button" aria-label="Cerrar acciones" onClick={() => setCompactMenuOpen(false)} className="fixed inset-0 z-[90] bg-black/25 backdrop-blur-[1px] lg:hidden" />
+        <section aria-label="Acciones y uso horario" className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] right-3 z-[91] w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-[22px] border border-black/[.08] bg-white p-3 shadow-2xl dark:border-white/[.1] dark:bg-[#181B20] lg:hidden">
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            <button type="button" onClick={() => runCalendarAction("create")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-[#176BFF] text-[11px] font-semibold text-white"><Plus size={19} />Crear</button>
+            <button type="button" onClick={() => runCalendarAction("download")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-slate-50 text-[11px] font-semibold text-slate-700 dark:bg-white/[.06] dark:text-slate-200"><Download size={19} />PDF</button>
+            <button type="button" onClick={() => runCalendarAction("toggle-times")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-slate-50 text-[11px] font-semibold text-slate-700 dark:bg-white/[.06] dark:text-slate-200"><Clock3 size={19} />Horarios</button>
+          </div>
+          <TimeZoneSelector timeZonePreference={timeZonePreference} baseIata={baseIata} onTimeZoneChange={onTimeZoneChange} />
+        </section>
+      </>}
+    </>
   );
 }

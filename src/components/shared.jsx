@@ -38,22 +38,40 @@ export function ProfileMenuMark({ compact = false, onOpenSummary, onOpenSettings
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !compact || typeof document === "undefined") return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open, compact]);
+
   const run = (callback) => {
     setOpen(false);
     callback?.();
   };
 
   const portal = open && typeof document !== "undefined" ? createPortal(
-    <>
-      <button type="button" aria-label="Cerrar menú de usuario" onClick={() => setOpen(false)} className="fixed inset-0 z-[100] bg-black/35 backdrop-blur-[2px]" />
-      <div role="menu" aria-label="Menú de usuario" style={{ top: position.top, left: position.left }} className="fixed z-[101] w-48 overflow-hidden rounded-[14px] border border-black/[.08] bg-white p-1 shadow-2xl dark:border-white/[.1] dark:bg-[#181B20]">
+    <div
+      className={`fixed inset-0 z-[100] bg-black/35 backdrop-blur-[2px] ${compact ? "flex items-center justify-center p-4" : ""}`}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setOpen(false);
+      }}
+    >
+      <div
+        role="menu"
+        aria-label="Menú de usuario"
+        style={compact ? undefined : { top: position.top, left: position.left }}
+        className={`${compact ? "relative w-full max-w-sm rounded-[20px] p-2" : "fixed w-48 rounded-[14px] p-1"} z-[101] overflow-hidden border border-black/[.08] bg-white shadow-2xl dark:border-white/[.1] dark:bg-[#181B20]`}
+      >
         {menuItems.map(({ id, label, icon: Icon, onClick, danger }) => (
-          <button key={id} type="button" role="menuitem" onClick={() => run(onClick)} className={`flex min-h-10 w-full items-center rounded-[10px] px-3 text-left text-sm font-semibold ${danger ? "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30" : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[.08]"}`}>
-            <Icon size={16} className="mr-2" />{label}
+          <button key={id} type="button" role="menuitem" onClick={() => run(onClick)} className={`${compact ? "min-h-12 rounded-[14px] px-4 text-[15px]" : "min-h-10 rounded-[10px] px-3 text-sm"} flex w-full items-center text-left font-semibold ${danger ? "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30" : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[.08]"}`}>
+            <Icon size={compact ? 18 : 16} className="mr-3" />{label}
           </button>
         ))}
       </div>
-    </>,
+    </div>,
     document.body,
   ) : null;
 

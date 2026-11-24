@@ -352,6 +352,20 @@ export function CalendarView({
     includeManualEventsInPdf,
   });
 
+  useEffect(() => {
+    const create = () => !readOnly && setShowManualModal(true);
+    const download = () => downloadVisibleCalendar();
+    const toggleTimes = () => onToggleSlabTimes?.();
+    window.addEventListener("calendar:create", create);
+    window.addEventListener("calendar:download", download);
+    window.addEventListener("calendar:toggle-times", toggleTimes);
+    return () => {
+      window.removeEventListener("calendar:create", create);
+      window.removeEventListener("calendar:download", download);
+      window.removeEventListener("calendar:toggle-times", toggleTimes);
+    };
+  });
+
   return (
     <div className={`${view === "mes" ? "flex h-[100dvh] flex-col overflow-hidden" : ""} mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5`}>
       <div ref={view === "agenda" ? agendaHeaderRef : undefined} className={`${view === "mes" ? "shrink-0" : ""} ${view === "agenda" ? "sticky top-0 z-20 -mx-3 bg-[#F5F6F8] px-3 pb-2 pt-3 dark:bg-[#090B10] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" : ""}`}>
@@ -366,37 +380,7 @@ export function CalendarView({
             />
           )}
         </div>
-        <div className="hidden lg:block">
-          <h1 className="text-2xl font-semibold tracking-[-0.03em]">
-            Calendario
-          </h1>
-          <p className="text-sm text-slate-500">
-            Tu programación de un vistazo.
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {!readOnly && <button onClick={() => setShowManualModal(true)} aria-label="Crear evento" className="grid h-10 w-10 place-items-center rounded-full bg-[#176BFF] text-white shadow-sm transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><Plus size={20}/></button>}
-          <button
-            onClick={downloadVisibleCalendar}
-            aria-label="Descargar calendario en PDF"
-            className="grid h-10 w-10 place-items-center rounded-full text-slate-600 transition hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]"
-          >
-            <Download size={19} />
-          </button>
-          <button
-            onClick={onToggleSlabTimes}
-            aria-pressed={showSlabTimes}
-            className={`grid h-10 w-10 place-items-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${showSlabTimes ? "bg-blue-50 text-[#176BFF] dark:bg-blue-950/50 dark:text-blue-300" : "text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/[.07]"}`}
-            aria-label={
-              showSlabTimes
-                ? "Ocultar horarios en los slabs"
-                : "Mostrar horarios en los slabs"
-            }
-          >
-            <Clock3 size={19} />
-          </button>
-          
-        </div>
+        <div />
       </header>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3 sm:mt-7">
         <div>
