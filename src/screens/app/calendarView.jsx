@@ -4,9 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-
   Download,
-
   Pencil,
   Plus,
   Settings,
@@ -61,12 +59,12 @@ function ManualEventModal({ theme, timeZone, onClose, onSave }) {
   return <>
     <button aria-label="Cerrar nuevo evento" onClick={onClose} className="fixed inset-0 z-50 bg-black/25 backdrop-blur-[2px]" />
     <form onSubmit={submit} className="fixed inset-x-3 bottom-3 z-[51] max-h-[calc(100vh-24px)] overflow-y-auto rounded-[22px] bg-white p-5 shadow-2xl dark:bg-[#181B20] sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2">
-      <div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-semibold">Nuevo evento</h2><button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 dark:bg-white/[.08]"><X size={18}/></button></div>
+      <div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-semibold">Nuevo evento</h2><button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 dark:bg-white/[.08]"><X size={18} /></button></div>
       <label className="block text-xs font-semibold">Título<input autoFocus value={form.title} onChange={set("title")} className={field} /></label>
       <label className="mt-3 block text-xs font-semibold">Descripción<textarea value={form.description} onChange={set("description")} rows={2} className={field} /></label>
-      <div className="mt-3 grid grid-cols-2 gap-2"><label className="text-xs font-semibold">Comienzo<input type="date" value={form.startDate} onChange={set("startDate")} className={field}/><input type="time" value={form.startTime} onChange={set("startTime")} className={field}/></label><label className="text-xs font-semibold">Finalización<input type="date" value={form.endDate} onChange={set("endDate")} className={field}/><input type="time" value={form.endTime} onChange={set("endTime")} className={field}/></label></div>
+      <div className="mt-3 grid grid-cols-2 gap-2"><label className="text-xs font-semibold">Comienzo<input type="date" value={form.startDate} onChange={set("startDate")} className={field} /><input type="time" value={form.startTime} onChange={set("startTime")} className={field} /></label><label className="text-xs font-semibold">Finalización<input type="date" value={form.endDate} onChange={set("endDate")} className={field} /><input type="time" value={form.endTime} onChange={set("endTime")} className={field} /></label></div>
       <label className="mt-3 block text-xs font-semibold">Uso horario<select value={form.timeZone} onChange={set("timeZone")} className={field}><option value={timeZone}>{timeZone} (actual)</option><option value="UTC">UTC</option><option value={Intl.DateTimeFormat().resolvedOptions().timeZone}>{Intl.DateTimeFormat().resolvedOptions().timeZone}</option></select></label>
-      <fieldset className="mt-4"><legend className="text-xs font-semibold">Visibilidad</legend><div className="mt-2 grid grid-cols-3 gap-2">{[["private","Oculto"],["friends","Solo amigos"],["public","Visible"]].map(([value,label]) => <label key={value} className={`cursor-pointer rounded-[10px] border px-2 py-2 text-center text-xs font-semibold ${form.visibility === value ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200" : "border-black/[.1] dark:border-white/[.1]"}`}><input type="radio" name="visibility" value={value} checked={form.visibility === value} onChange={set("visibility")} className="sr-only"/>{label}</label>)}</div></fieldset>
+      <fieldset className="mt-4"><legend className="text-xs font-semibold">Visibilidad</legend><div className="mt-2 grid grid-cols-3 gap-2">{[["private", "Oculto"], ["friends", "Solo amigos"], ["public", "Visible"]].map(([value, label]) => <label key={value} className={`cursor-pointer rounded-[10px] border px-2 py-2 text-center text-xs font-semibold ${form.visibility === value ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200" : "border-black/[.1] dark:border-white/[.1]"}`}><input type="radio" name="visibility" value={value} checked={form.visibility === value} onChange={set("visibility")} className="sr-only" />{label}</label>)}</div></fieldset>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}<button disabled={saving} className="mt-5 min-h-11 w-full rounded-[12px] bg-[#176BFF] font-semibold text-white disabled:opacity-60">{saving ? "Guardando…" : "Crear evento"}</button>
     </form>
   </>;
@@ -369,40 +367,40 @@ export function CalendarView({
   return (
     <div className={`${view === "mes" ? "flex h-[100dvh] flex-col overflow-hidden" : ""} mx-auto max-w-[1500px] px-3 pb-24 pt-3 sm:px-5 lg:px-7 lg:pb-8 lg:pt-5`}>
       <div ref={view === "agenda" ? agendaHeaderRef : undefined} className={`${view === "mes" ? "shrink-0" : ""} ${view === "agenda" ? "sticky top-0 z-20 -mx-3 bg-[#F5F6F8] px-3 pb-2 pt-3 dark:bg-[#090B10] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" : ""}`}>
-      <div className="mt-5 flex flex-wrap items-end justify-between gap-3 sm:mt-7">
-        <div>
-          <div className="flex items-center gap-0">
-            <button
-              onClick={() => moveMonth(-1)}
-              className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
-              aria-label="Mes anterior"
-            >
-              <ChevronLeft size={19} />
-            </button>
-            <h2 className="min-w-0 px-1 text-center text-xl font-semibold capitalize tracking-[-0.025em] sm:text-2xl">
-              {monthLabel}
-            </h2>
-            <button
-              onClick={() => moveMonth(1)}
-              className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
-              aria-label="Mes siguiente"
-            >
-              <ChevronRight size={19} />
-            </button>
+        <div className="mt-5 flex flex-wrap items-end justify-between gap-3 sm:mt-7">
+          <div>
+            <div className="flex items-center gap-0">
+              <button
+                onClick={() => moveMonth(-1)}
+                className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
+                aria-label="Mes anterior"
+              >
+                <ChevronLeft size={19} />
+              </button>
+              <h2 className="min-w-0 px-1 text-center text-xl font-semibold capitalize tracking-[-0.025em] sm:text-2xl">
+                {monthLabel}
+              </h2>
+              <button
+                onClick={() => moveMonth(1)}
+                className="grid h-9 w-9 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/[.07]"
+                aria-label="Mes siguiente"
+              >
+                <ChevronRight size={19} />
+              </button>
+            </div>
+          </div>
+          <div className="flex rounded-[12px] bg-slate-200/70 p-1 dark:bg-white/[.07]">
+            {["mes", "agenda"].map((value) => (
+              <button
+                key={value}
+                onClick={() => setView(value)}
+                className={`min-h-8 rounded-[9px] px-3 text-xs font-semibold capitalize transition ${view === value ? "bg-white text-slate-950 shadow-sm dark:bg-white/15 dark:text-white" : "text-slate-500"}`}
+              >
+                {value}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="flex rounded-[12px] bg-slate-200/70 p-1 dark:bg-white/[.07]">
-          {["mes", "agenda"].map((value) => (
-            <button
-              key={value}
-              onClick={() => setView(value)}
-              className={`min-h-8 rounded-[9px] px-3 text-xs font-semibold capitalize transition ${view === value ? "bg-white text-slate-950 shadow-sm dark:bg-white/15 dark:text-white" : "text-slate-500"}`}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
-      </div>
       </div>
       {view === "mes" ? (
         <motion.section
@@ -423,35 +421,35 @@ export function CalendarView({
           </div>
           <div ref={monthScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className="grid grid-cols-7">
-            {monthDays.map((day, index) => (
-              <CalendarDay
-                key={index}
-                dayRef={
-                  day.day === today.day &&
-                  day.month === today.month &&
-                  day.year === today.year
-                    ? monthTodayRef
-                    : undefined
-                }
-                date={day}
-                index={index}
-                isToday={
-                  day.day === today.day &&
-                  day.month === today.month &&
-                  day.year === today.year
-                }
-                isPast={
-                  Date.UTC(day.year, day.month - 1, day.day) <
-                  Date.UTC(today.year, today.month - 1, today.day)
-                }
-                isLastRow={index >= monthDays.length - 7}
-                events={eventsByVisibleDay[`${day.year}-${day.month}-${day.day}`] || []}
-                theme={theme}
-                showSlabTimes={showSlabTimes}
-                timeZone={timeZone}
-                onSelect={setSelected}
-              />
-            ))}
+              {monthDays.map((day, index) => (
+                <CalendarDay
+                  key={index}
+                  dayRef={
+                    day.day === today.day &&
+                      day.month === today.month &&
+                      day.year === today.year
+                      ? monthTodayRef
+                      : undefined
+                  }
+                  date={day}
+                  index={index}
+                  isToday={
+                    day.day === today.day &&
+                    day.month === today.month &&
+                    day.year === today.year
+                  }
+                  isPast={
+                    Date.UTC(day.year, day.month - 1, day.day) <
+                    Date.UTC(today.year, today.month - 1, today.day)
+                  }
+                  isLastRow={index >= monthDays.length - 7}
+                  events={eventsByVisibleDay[`${day.year}-${day.month}-${day.day}`] || []}
+                  theme={theme}
+                  showSlabTimes={showSlabTimes}
+                  timeZone={timeZone}
+                  onSelect={setSelected}
+                />
+              ))}
             </div>
           </div>
         </motion.section>
@@ -533,15 +531,15 @@ export function CalendarView({
                     <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
                       Situado
                     </div>
-                    
+
                   )}
                   {selected.situated &&
                     selectedAirlineName &&
                     !selected.flightNumber?.includes("TAXI") && (
-                    <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
-                      {selectedAirlineName}
-                    </div>
-                  )}
+                      <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
+                        {selectedAirlineName}
+                      </div>
+                    )}
                   {(selected.flightNumber?.startsWith("GRD") || selected.flightNumber?.includes("TAXI")) && (
                     <div className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-white/[.1] dark:text-slate-200">
                       Por carretera

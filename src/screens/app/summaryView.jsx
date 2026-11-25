@@ -86,6 +86,31 @@ function calculateSummary(schedule, period, timeZone, baseIata) {
       (new Date(event.endsAt) - new Date(event.startsAt)) / HOUR,
     ),
   }));
+  const sortedFlights = [...flights]
+    .filter((event) => event.startsAt && event.endsAt)
+    .sort(
+      (left, right) =>
+        new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+    );
+  const layovers = sortedFlights.slice(0, -1).flatMap((event, index) => {
+    const nextEvent = sortedFlights[index + 1];
+    const currentRoute = getEventRoute(event);
+    const nextRoute = getEventRoute(nextEvent);
+    if (!currentRoute || !nextRoute) return [];
+    const [, airport] = currentRoute.split("-");
+    const [nextOrigin] = nextRoute.split("-");
+    if (!airport || airport !== nextOrigin) return [];
+    const hours =
+      (new Date(nextEvent.startsAt).getTime() -
+        new Date(event.endsAt).getTime()) /
+      HOUR;
+    if (hours <= 0 || hours > 24) return [];
+    const date = getDateInTimeZone(timeZone, event.endsAt);
+    return [{ hours, airport, day: date?.day }];
+  });
+  const longestLayover = layovers.sort(
+    (left, right) => right.hours - left.hours,
+  )[0];
   const totalHours = durations.reduce((sum, item) => sum + item.hours, 0);
   const early = events.filter(
     (event) =>
@@ -115,6 +140,7 @@ function calculateSummary(schedule, period, timeZone, baseIata) {
     freeDays: daysInMonth - programmedDays.size,
     restDays: events.filter((event) => event.type === "rest").length,
     longest: durations.sort((a, b) => b.hours - a.hours)[0]?.hours || 0,
+    longestLayover,
   };
 }
 
@@ -299,7 +325,7 @@ export function SummaryView({
         </div>
       ) : (
         <>
-          <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Metric
               icon={Clock3}
               label="Horas"
@@ -318,7 +344,7 @@ export function SummaryView({
               detail={`${summary.routes.size} rutas distintas`}
             />
           </section>
-          <section className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Metric
               icon={AlarmClock}
               label="Madrugones"
@@ -338,6 +364,20 @@ export function SummaryView({
               label="Vuelo más largo"
               value={formatHours(summary.longest)}
               detail={`Media: ${formatHours(average)}`}
+            />
+            <Metric
+              icon={Route}
+              label="Escala más larga"
+              value={
+                summary.longestLayover
+                  ? formatHours(summary.longestLayover.hours)
+                  : "00:00"
+              }
+              detail={
+                summary.longestLayover
+                  ? `${summary.longestLayover.airport} · ${summary.longestLayover.day}`
+                  : "Sin escalas"
+              }
             />
           </section>
           <section className="mt-6">

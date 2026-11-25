@@ -78,6 +78,11 @@ export function AppNav({
     ["settings", Settings, "Ajustes"],
   ];
 
+  const runCalendarAction = (action) => {
+    setCompactMenuOpen(false);
+    window.dispatchEvent(new CustomEvent(`calendar:${action}`));
+  };
+
   if (desktop) {
     return (
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[236px] flex-col border-r border-black/[.06] bg-white px-4 py-5 dark:border-white/[.07] dark:bg-[#101216] lg:flex">
@@ -94,19 +99,23 @@ export function AppNav({
             </button>
           ))}
         </nav>
-        <TimeZoneSelector
-          timeZonePreference={timeZonePreference}
-          baseIata={baseIata}
-          onTimeZoneChange={onTimeZoneChange}
-        />
+        <div className="mt-auto">
+          {(active === "calendar" || active === "compare") && (
+            <>
+              <div className={`mb-3 grid gap-2 ${active === "calendar" ? "grid-cols-3" : "grid-cols-2"}`}>
+                {active === "calendar" && (
+                  <button type="button" onClick={() => runCalendarAction("create")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-[#176BFF] text-[11px] font-semibold text-white"><Plus size={19} />Crear</button>
+                )}
+                <button type="button" onClick={() => runCalendarAction("download")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-slate-50 text-[11px] font-semibold text-slate-700 dark:bg-white/[.06] dark:text-slate-200"><Download size={19} />PDF</button>
+                <button type="button" onClick={() => runCalendarAction("toggle-times")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-slate-50 text-[11px] font-semibold text-slate-700 dark:bg-white/[.06] dark:text-slate-200"><Clock3 size={19} />Horarios</button>
+              </div>
+              <TimeZoneSelector timeZonePreference={timeZonePreference} baseIata={baseIata} onTimeZoneChange={onTimeZoneChange} />
+            </>
+          )}
+        </div>
       </aside>
     );
   }
-
-  const runCalendarAction = (action) => {
-    setCompactMenuOpen(false);
-    window.dispatchEvent(new CustomEvent(`calendar:${action}`));
-  };
 
   return (
     <>
@@ -121,13 +130,15 @@ export function AppNav({
         <button type="button" aria-label="Cerrar acciones" onClick={() => setCompactMenuOpen(false)} className="fixed inset-0 z-[90] bg-black/25 backdrop-blur-[1px] lg:hidden" />
         <section aria-label="Acciones y uso horario" className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] right-3 z-[91] w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-[22px] border border-black/[.08] bg-white p-3 shadow-2xl dark:border-white/[.1] dark:bg-[#181B20] lg:hidden">
           <div className={`grid gap-2 ${active === "calendar" ? "mb-3 grid-cols-3" : "grid-cols-2"}`}>
-            <button type="button" onClick={() => runCalendarAction("create")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-[#176BFF] text-[11px] font-semibold text-white"><Plus size={19} />Crear</button>
+            {active !== "compare" && (
+              <button type="button" onClick={() => runCalendarAction("create")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-[#176BFF] text-[11px] font-semibold text-white"><Plus size={19} />Crear</button>
+            )}
             <button type="button" onClick={() => runCalendarAction("download")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-slate-50 text-[11px] font-semibold text-slate-700 dark:bg-white/[.06] dark:text-slate-200"><Download size={19} />PDF</button>
-            {active === "calendar" && (
+            {(active === "calendar" || active === "compare") && (
               <button type="button" onClick={() => runCalendarAction("toggle-times")} className="flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[15px] bg-slate-50 text-[11px] font-semibold text-slate-700 dark:bg-white/[.06] dark:text-slate-200"><Clock3 size={19} />Horarios</button>
             )}
           </div>
-          {active === "calendar" && (
+          {(active === "calendar" || active === "compare") && (
             <TimeZoneSelector timeZonePreference={timeZonePreference} baseIata={baseIata} onTimeZoneChange={onTimeZoneChange} />
           )}
         </section>
