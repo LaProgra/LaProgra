@@ -375,7 +375,7 @@ export function SummaryView({
               }
               detail={
                 summary.longestLayover
-                  ? `${summary.longestLayover.airport} · ${summary.longestLayover.day}`
+                  ? `${summary.longestLayover.airport} · ${summary.longestLayover.day} ${summary.longestLayover.month}`
                   : "Sin escalas"
               }
             />
