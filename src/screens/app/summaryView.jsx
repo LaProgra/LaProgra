@@ -191,7 +191,7 @@ function DestinationMap({ destinations }) {
       </div>
     );
   return (
-    <div className="overflow-hidden rounded-[20px] border border-black/[.06] bg-white shadow-sm dark:border-white/[.08] dark:bg-[#14171A]">
+    <div className="relative z-0 overflow-hidden rounded-[20px] border border-black/[.06] bg-white shadow-sm dark:border-white/[.08] dark:bg-[#14171A]">
       <div className="flex items-center justify-between px-5 pb-3 pt-5">
         <div>
           <h2 className="font-semibold">Mapa de destinos</h2>
